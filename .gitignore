@@ -128,3 +128,5 @@ dmypy.json
 # Pyre type checker
 .pyre/
 /config.py
+/token.pkl
+/client_secret.json
