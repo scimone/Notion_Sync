@@ -2,6 +2,7 @@ import os
 from notion_client import Client
 from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
+from google.auth.transport.requests import Request
 import pickle
 
 
@@ -32,7 +33,7 @@ class NotionAPI():
                         {
                             "property": self.properties['Date'],
                             "date": {
-                                "next_week": {}
+                                "next_month": {}
                             }
                         }
                     ]
@@ -55,30 +56,52 @@ class GCalAPI():
         self.default_event_start = gcal_config['Default Event Start']
         self.default_event_length = gcal_config['Default Event Length']
         self.calendars = gcal_config['Calendars']
-        self.client = self.setup_gcal_client()
+        self.service = self.setup_service()
 
-    def setup_gcal_client(self):
-        if not os.path.isfile("token.pkl"):
-            self.renew_gcal_token()
-        service = self.setup_gcal_service()
-
-        try:
-            client = service.calendars().get(calendarId=self.calendars[self.default_calendar]).execute()
-        except:
-            # refresh the service
-            self.renew_gcal_token()
-            service = self.setup_gcal_service()
-            client = service.calendars().get(calendarId=self.calendars[self.default_calendar]).execute()
-            # TODO: no idea which client I need
-        return client
-
-    def setup_gcal_service(self):
-        credentials = pickle.load(open("token.pkl", "rb"))
+    def setup_service(self):
+        credentials = self.get_credentials()
         service = build("calendar", "v3", credentials=credentials)
         return service
 
-    def renew_gcal_token(self):
+    def get_credentials(self):
+        if os.path.isfile("token.pkl"):
+            credentials = self._load_credentials()
+        else:
+            credentials = None
+
+        if not (credentials and credentials.valid):
+            if credentials:
+                credentials.refresh(Request())  # refresh credentials
+            else:
+                credentials = self._setup_credentials()
+            self._save_credentials(credentials)
+
+        return credentials
+
+    def _setup_credentials(self):
         scopes = ['https://www.googleapis.com/auth/calendar']
-        flow = InstalledAppFlow.from_client_secrets_file("client_secret.json", scopes=scopes)
-        credentials = flow.run_console()
+        flow = InstalledAppFlow.from_client_secrets_file('client_secret.json', scopes=scopes)
+        credentials = flow.run_local_server(port=0)
+        return credentials
+
+    def _save_credentials(self, credentials):
         pickle.dump(credentials, open("token.pkl", "wb"))
+
+    def _load_credentials(self):
+        credentials = pickle.load(open("token.pkl", "rb"))
+        return credentials
+
+    def query(self, calendar_id, time_min, time_max):
+        response = self.service.events().list(
+            calendarId=calendar_id,
+            singleEvents=True,
+            orderBy='updated',
+            timeMin=self.format_date(time_min),
+            timeMax=self.format_date(time_max)
+        ).execute()
+        return response
+
+    def format_date(self, date):
+        timezone_appendix = '+02:00'
+        return date.strftime("%Y-%m-%dT%H:%M:%S") + timezone_appendix  # Change the last 5 characters to be representative of your timezone
+        # ^^ has to be adjusted for when daylight savings is different if your area observes it

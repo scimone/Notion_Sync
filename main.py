@@ -5,5 +5,9 @@ from config import notion_config, gcal_config
 
 if __name__ == '__main__':
     today = datetime.today().strftime("%Y-%m-%d")
+
+    # set up APIs
     gcal = GCalAPI(gcal_config)
     notion = NotionAPI(notion_config)
+
+    # get all entries from today to
