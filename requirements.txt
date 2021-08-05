@@ -1,0 +1,6 @@
+flask
+flask_restful
+requests
+gunicorn
+APScheduler==3.0.0
+PyYAML
