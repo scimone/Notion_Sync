@@ -2,7 +2,7 @@ import os
 from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
-from datetime import datetime
+from datetime import datetime, timedelta
 import pickle
 
 
@@ -59,6 +59,7 @@ class GCalAPI():
                 timeMax=self.format_date(time_max)
             ).execute()
             results.extend(response.get('items', []))
+        print(results)
         return self._convert_query_results(results)
 
     def _convert_query_results(self, results):
@@ -77,12 +78,15 @@ class GCalAPI():
             # get dates
             start_date = self.parse_date(item['start'])
             end_date = self.parse_date(item['end'])
+            if (start_date == end_date - timedelta(days=1)) and (start_date.hour == 0) and (start_date.minute == 0):  # all-day events
+                start_date += timedelta(hours=self.default_event_start)
+                end_date = start_date + timedelta(minutes=self.default_event_length)
 
             # append entries
             entries['names'].append(item['summary'])
             entries['start_dates'].append(start_date)
             entries['end_dates'].append(end_date)
-            entries['durations'].append(end_date - start_date)
+            entries['durations'].append((end_date - start_date).seconds / 3600)
             entries['calendars'].append(self.calendars[item['organizer']['email']])
             entries['event_ids'].append(item['id'])
             entries['last_updated'].append(self.parse_date(item['updated']))

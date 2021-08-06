@@ -18,22 +18,22 @@ class NotionAPI():
     def format_date(self, date):
         return date.strftime("%Y-%m-%d")
 
-    def query(self, today):
+    def query(self, time_min, time_max):
         response = self.client.databases.query(
             **{
                 "database_id": self.database_id,
                 "filter": {
-                    "or": [
+                    "and": [
                         {
                             "property": self.properties['Date'],
                             "date": {
-                                "equals": self.format_date(today)
+                                "on_or_after": self.format_date(time_min)
                             }
                         },
                         {
                             "property": self.properties['Date'],
                             "date": {
-                                "next_month": {}
+                                "before": self.format_date(time_max)
                             }
                         }
                     ]

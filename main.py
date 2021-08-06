@@ -1,7 +1,7 @@
 from Notion import NotionAPI
 from Gcal import GCalAPI
 from config import notion_config, gcal_config
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 import numpy as np
 
 if __name__ == '__main__':
@@ -12,14 +12,15 @@ if __name__ == '__main__':
 
     # get all entries from today to next month
 
-    today = datetime.now()
-    time_min = today
+    today = date.today()
+    time_min = today - timedelta(seconds=1)
     time_max = today + timedelta(days=30)
 
     gcal_entries = gcal.query(time_min, time_max)
-    notion_entries = notion.query(today)
+    notion_entries = notion.query(time_min, time_max)
 
-    # compare events
+    # different scenarios
+    ##############################################################################################################
 
     # events that have been newly created in notion and not added to gcal yet
     idx_new_notion_events = np.where(np.array(notion_entries['event_ids']) == None)[0]
@@ -44,12 +45,19 @@ if __name__ == '__main__':
         if gcal_entries['last_updated'][gcal_idx] > notion_entries['last_updated'][notion_idx]:
             idx_modified_gcal_events.append(gcal_idx)
 
+    ###########################################################################################################
+
 
     # bring new events from gcal over to notion
-    start_date = today
-    response = notion.add_entry(name='test', start_date=start_date, end_date=start_date, duration=2, gcal_id='test', category='Tasks')
 
-    # case 1: all-day events on one day
-    # case 2: all-day events over multiple days
-    # case 3: datetime events with only start date
-    # case 4: datetime events with start and end date
+    for idx in idx_new_gcal_events:
+        name = gcal_entries['names'][idx]
+        start_date = gcal_entries['start_dates'][idx]
+        end_date = gcal_entries['end_dates'][idx]
+        duration = gcal_entries['durations'][idx]
+        gcal_id = gcal_entries['event_ids'][idx]
+        calendar = gcal_entries['calendars'][idx]
+        notion.add_entry(name=name, start_date=start_date, end_date=end_date, duration=duration, gcal_id=gcal_id, category=calendar)
+
+    
+
