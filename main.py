@@ -45,4 +45,11 @@ if __name__ == '__main__':
             idx_modified_gcal_events.append(gcal_idx)
 
 
+    # bring new events from gcal over to notion
+    start_date = today
+    response = notion.add_entry(name='test', start_date=start_date, end_date=start_date, duration=2, gcal_id='test', category='Tasks')
 
+    # case 1: all-day events on one day
+    # case 2: all-day events over multiple days
+    # case 3: datetime events with only start date
+    # case 4: datetime events with start and end date
