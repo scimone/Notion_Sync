@@ -70,6 +70,7 @@ class GCalAPI():
             'calendars': [],
             'durations': [],
             'event_ids': [],
+            'last_updated': [],
         }
 
         for item in results:
@@ -84,7 +85,7 @@ class GCalAPI():
             entries['durations'].append(end_date - start_date)
             entries['calendars'].append(self.calendars[item['organizer']['email']])
             entries['event_ids'].append(item['id'])
-
+            entries['last_updated'].append(self.parse_date(item['updated']))
         return entries
 
     def format_date(self, date):
@@ -92,9 +93,12 @@ class GCalAPI():
         return date.strftime("%Y-%m-%dT%H:%M:%S") + timezone_appendix  # Change the last 5 characters to be representative of your timezone
         # ^^ has to be adjusted for when daylight savings is different if your area observes it
 
-    def parse_date(self, dictionary):
-        if 'dateTime' in dictionary:
-            date = datetime.strptime(dictionary['dateTime'], '%Y-%m-%dT%H:%M:%S%z')  # TODO: other formats?
-        elif 'date' in dictionary:
-            date = datetime.strptime(dictionary['date'], '%Y-%m-%d')
+    def parse_date(self, date):
+        if type(date) is dict:
+            if 'dateTime' in date:
+                date = datetime.strptime(date['dateTime'], '%Y-%m-%dT%H:%M:%S%z')  # TODO: other formats?
+            elif 'date' in date:
+                date = datetime.strptime(date['date'], '%Y-%m-%d')
+        else:
+            date = datetime.strptime(date, '%Y-%m-%dT%H:%M:%S.%f%z')
         return date
