@@ -44,7 +44,6 @@ class NotionAPI():
         return results
 
     def _convert_query_results(self, events):
-        print(events)
         entries = {
             'names': [],
             'start_dates': [],
@@ -57,16 +56,32 @@ class NotionAPI():
         }
 
         for item in events:
-            entries['names'].append(item['properties'][self.properties['Name']]['title'][0]['text']['content'])
-            entries['categories'].append(item['properties'][self.properties['Category']]['select']['name'])
+            # need to test if the properties are specified for the item, otherwise error
+            item_properties = item['properties'].keys()
+
+            if self.properties['Category'] in item_properties:
+                entries['categories'].append(item['properties'][self.properties['Category']]['select']['name'])
+            else:
+                entries['categories'].append(None)
+
             if item['properties'][self.properties['Event ID']]['rich_text']:  # if not empty
                 entries['event_ids'].append(item['properties'][self.properties['Event ID']]['rich_text'][0]['text']['content'])
             else:
                 entries['event_ids'].append(None)
-            entries['durations'].append(item['properties'][self.properties['Duration']]['number'])
+
+            if self.properties['Duration'] in item_properties:
+                entries['durations'].append(item['properties'][self.properties['Duration']]['number'])
+            else:
+                entries['durations'].append(None)
+
+            if self.properties['Last Updated'] in item_properties:
+                entries['last_updated'].append(self.parse_date(item['properties'][self.properties['Last Updated']]['date']['start']))
+            else:
+                entries['last_updated'].append(None)
+
+            entries['names'].append(item['properties'][self.properties['Name']]['title'][0]['text']['content'])
             entries['start_dates'].append(self.parse_date(item['properties'][self.properties['Date']]['date']['start']))
             entries['end_dates'].append(self.parse_date(item['properties'][self.properties['Date']]['date']['end']))
-            entries['last_updated'].append(self.parse_date(item['properties'][self.properties['Last Updated']]['date']['start']))
             entries['needs_update'].append(item['properties'][self.properties['Needs Update?']]['formula']['boolean'])
 
         return entries
