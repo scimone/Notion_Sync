@@ -15,8 +15,8 @@ class NotionAPI():
         client = Client(auth=os.environ['NOTION_TOKEN'])
         return client
 
-    def format_date(self, date):
-        return date.strftime("%Y-%m-%d")
+    # def format_date(self, date):
+    #     return date.strftime("%Y-%m-%d")
 
     def query(self, time_min, time_max):
         response = self.client.databases.query(
@@ -50,9 +50,10 @@ class NotionAPI():
             'end_dates': [],
             'categories': [],
             'durations': [],
-            'event_ids': [],
+            'gcal_ids': [],
             'last_updated': [],
-            'needs_update': []
+            'needs_update': [],
+            'notion_ids': []
         }
 
         for item in events:
@@ -65,9 +66,9 @@ class NotionAPI():
                 entries['categories'].append(None)
 
             if item['properties'][self.properties['GCal ID']]['rich_text']:  # if not empty
-                entries['event_ids'].append(item['properties'][self.properties['GCal ID']]['rich_text'][0]['text']['content'])
+                entries['gcal_ids'].append(item['properties'][self.properties['GCal ID']]['rich_text'][0]['text']['content'])
             else:
-                entries['event_ids'].append(None)
+                entries['gcal_ids'].append(None)
 
             if self.properties['Duration'] in item_properties:
                 entries['durations'].append(item['properties'][self.properties['Duration']]['number'])
@@ -83,6 +84,7 @@ class NotionAPI():
             entries['start_dates'].append(self.parse_date(item['properties'][self.properties['Date']]['date']['start']))
             entries['end_dates'].append(self.parse_date(item['properties'][self.properties['Date']]['date']['end']))
             entries['needs_update'].append(item['properties'][self.properties['Needs Update?']]['formula']['boolean'])
+            entries['notion_ids'].append(item['id'])
 
         return entries
 
@@ -151,7 +153,47 @@ class NotionAPI():
         response = self.client.pages.create(**data)
         return response
 
-    def update_entry(self):
-        pass
+    def update_entry(self, page_id, name=None, start_date=None, end_date=None, duration=None, gcal_id=None, category=None):
+        data = {
+            "page_id": page_id,
+            "properties": {
+                self.properties['Last Updated']: {
+                    "type": 'date',
+                    'date': {
+                        'start': self.format_date(datetime.now()),
+                    }
+                }
+            },
+        }
+
+        if name:
+            # data['properties'][self.properties['Name']] = {}
+            # data['properties'][self.properties['Name']]['type'] = 'title'
+            # data['properties'][self.properties['Name']]['title'] = {'type': 'text', 'text': {}}
+            # data['properties'][self.properties['Name']]['title']['text'] = {'content': name}
+
+            data['properties'][self.properties['Name']] = {"type": 'title',
+                                                            "title": [
+                                                                {
+                                                                    "type": 'text',
+                                                                    "text": {
+                                                                        "content": name
+                                                                    },
+                                                                },
+                                                            ],
+                                                           }
+
+        if start_date and end_date:
+            data['properties'][self.properties['Date']] = {}
+            data['properties'][self.properties['Date']]['type'] = 'date'
+            data['properties'][self.properties['Date']]['date'] = {'start': self.format_date(start_date),
+                                                                   'end': self.format_date(end_date)}
+
+        if duration:
+            data['properties'][self.properties['Duration']] = {}
+            data['properties'][self.properties['Duration']]['type'] = 'number'
+            data['properties'][self.properties['Duration']]['number'] = duration
+        response = self.client.pages.update(**data)
+        return response
 
 

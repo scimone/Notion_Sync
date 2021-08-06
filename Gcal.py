@@ -59,7 +59,6 @@ class GCalAPI():
                 timeMax=self.format_date(time_max)
             ).execute()
             results.extend(response.get('items', []))
-        print(results)
         return self._convert_query_results(results)
 
     def _convert_query_results(self, results):
@@ -70,7 +69,7 @@ class GCalAPI():
             'end_dates': [],
             'calendars': [],
             'durations': [],
-            'event_ids': [],
+            'gcal_ids': [],
             'last_updated': [],
         }
 
@@ -78,9 +77,11 @@ class GCalAPI():
             # get dates
             start_date = self.parse_date(item['start'])
             end_date = self.parse_date(item['end'])
-            if (start_date == end_date - timedelta(days=1)) and (start_date.hour == 0) and (start_date.minute == 0):  # all-day events
+            if (start_date == end_date - timedelta(days=1)) and (start_date.hour == 0) and (start_date.minute == 0):  # one-day events
                 start_date += timedelta(hours=self.default_event_start)
                 end_date = start_date + timedelta(minutes=self.default_event_length)
+            elif end_date > start_date + timedelta(days=1):  # all-day events over multiple days
+                end_date -= timedelta(days=1)  # subtract one day because notion is weird and adds one day
 
             # append entries
             entries['names'].append(item['summary'])
@@ -88,7 +89,7 @@ class GCalAPI():
             entries['end_dates'].append(end_date)
             entries['durations'].append((end_date - start_date).seconds / 3600)
             entries['calendars'].append(self.calendars[item['organizer']['email']])
-            entries['event_ids'].append(item['id'])
+            entries['gcal_ids'].append(item['id'])
             entries['last_updated'].append(self.parse_date(item['updated']))
         return entries
 
@@ -106,3 +107,31 @@ class GCalAPI():
         else:
             date = datetime.strptime(date, '%Y-%m-%dT%H:%M:%S.%f%z')
         return date
+
+    def add_entry(self, calendar_id, name, timezone, start_date, end_date, description=None, source=None):
+        data = {
+            'summary': name,
+            'start': {
+                'dateTime': self.format_date(start_date),
+                'timeZone': timezone,
+            },
+            'end': {
+                'dateTime': self.format_date(end_date),
+                'timeZone': timezone,
+            },
+        }
+
+        if description:
+            data['description'] = description
+        if source:
+            data['source'] = {
+                'title': source['title'],
+                'url': source['url'],
+            }
+
+        response = self.service.events().insert(calendarId=calendar_id, body=data).execute()
+        return response['id']
+
+
+    def update_entry(self):
+        pass
