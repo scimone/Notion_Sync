@@ -76,14 +76,17 @@ class NotionAPI():
                 entries['durations'].append(None)
 
             if self.properties['Last Updated'] in item_properties:
-                entries['last_updated'].append(self.parse_date(item['properties'][self.properties['Last Updated']]['date']['start']))
+                last_updated = self.parse_date(item['properties'][self.properties['Last Updated']]['date']['start'])
+                last_edited = self.parse_date(item['properties'][self.properties['Last Edited']]['last_edited_time'])
+
+                entries['last_updated'].append(last_updated)
+
+                if last_edited > last_updated:
+                    entries['needs_update'].append(True)
+                else:
+                    entries['needs_update'].append(False)
             else:
                 entries['last_updated'].append(None)
-
-            if self.properties['Last Edited'] > self.properties['Last Updated']:
-                entries['needs_update'].append(True)
-                print(item['properties'][self.properties['Name']]['title'][0]['text']['content'])
-            else:
                 entries['needs_update'].append(False)
 
             entries['names'].append(item['properties'][self.properties['Name']]['title'][0]['text']['content'])

@@ -38,9 +38,9 @@ if __name__ == '__main__':
 
     idx_modified_gcal_events = []
     for notion_idx, gcal_idx in zip(idx_common_ids_notion, idx_common_ids_gcal):
-        print(notion_entries['names'][notion_idx])
-        print(gcal_entries['last_updated'][gcal_idx])
-        print(notion_entries['last_updated'][notion_idx])
+        # print(notion_entries['names'][notion_idx])
+        # print(gcal_entries['last_updated'][gcal_idx])
+        # print(notion_entries['last_updated'][notion_idx])
         if gcal_entries['last_updated'][gcal_idx] > notion_entries['last_updated'][notion_idx]:
             idx_modified_gcal_events.append([gcal_idx, notion_idx])
 
@@ -93,3 +93,9 @@ if __name__ == '__main__':
         duration = (end_date - start_date).seconds / 3600
         notion.update_entry(page_id=page_id, gcal_id=gcal_id, category=calendar, duration=duration, start_date=start_date, end_date=end_date)
         print("Added '{}' to GCal.".format(name))
+
+
+    # update events in gcal that have been updated in notion
+
+    for idx in idx_modified_notion_events:
+        print(notion_entries['names'][idx])
