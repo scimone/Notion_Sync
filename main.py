@@ -1,12 +1,11 @@
 from Notion import NotionAPI
 from Gcal import GCalAPI
-from config import notion_config, gcal_config
+from config import notion_config, gcal_config, timezone
 from datetime import datetime, timedelta, date
 import numpy as np
 
 if __name__ == '__main__':
     # set up APIs
-
     gcal = GCalAPI(gcal_config)
     notion = NotionAPI(notion_config)
 
@@ -39,11 +38,13 @@ if __name__ == '__main__':
 
     idx_modified_gcal_events = []
     for notion_idx, gcal_idx in zip(idx_common_ids_notion, idx_common_ids_gcal):
+        print(notion_entries['names'][notion_idx])
+        print(gcal_entries['last_updated'][gcal_idx])
+        print(notion_entries['last_updated'][notion_idx])
         if gcal_entries['last_updated'][gcal_idx] > notion_entries['last_updated'][notion_idx]:
             idx_modified_gcal_events.append([gcal_idx, notion_idx])
 
     ###########################################################################################################
-
 
     # bring new events from gcal to notion
 
@@ -70,5 +71,25 @@ if __name__ == '__main__':
         notion.update_entry(page_id=page_id, name=name, start_date=start_date, end_date=end_date, duration=duration, gcal_id=gcal_id, category=calendar)
         print("Updated '{}' in Notion.".format(name))
 
-
     # bring new events from notion to gcal
+    calendar_names = gcal_config['Calendars'].keys()
+    for idx in idx_new_notion_events:
+        name = notion_entries['names'][idx]
+        calendar = notion_entries['categories'][idx]
+        start_date = notion_entries['start_dates'][idx]
+        end_date = notion_entries['end_dates'][idx]
+        duration = notion_entries['durations'][idx]
+        if not calendar in calendar_names:
+            calendar = gcal_config['Default Calendar']
+        if not end_date:
+            if (start_date.hour == 0) and (start_date.minute == 0):  # no time specified
+                start_date += timedelta(hours=gcal_config['Default Event Start'])
+                print("Start time of '{}' set to {}".format(name, start_date))
+            if not duration:
+                duration = gcal_config['Default Event Length']
+            end_date = start_date + timedelta(hours=duration)
+        page_id = notion_entries['notion_ids'][idx]
+        gcal_id = gcal.add_entry(calendar=calendar, name=name, timezone=timezone, start_date=start_date, end_date=end_date, description=None, source=None)
+        duration = (end_date - start_date).seconds / 3600
+        notion.update_entry(page_id=page_id, gcal_id=gcal_id, category=calendar, duration=duration, start_date=start_date, end_date=end_date)
+        print("Added '{}' to GCal.".format(name))

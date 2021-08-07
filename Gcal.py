@@ -90,7 +90,7 @@ class GCalAPI():
             entries['durations'].append((end_date - start_date).seconds / 3600)
             entries['calendars'].append(self.calendars[item['organizer']['email']])
             entries['gcal_ids'].append(item['id'])
-            entries['last_updated'].append(self.parse_date(item['updated']))
+            entries['last_updated'].append(self.datetime_floor(self.parse_date(item['updated'])))
         return entries
 
     def format_date(self, date):
@@ -108,7 +108,11 @@ class GCalAPI():
             date = datetime.strptime(date, '%Y-%m-%dT%H:%M:%S.%f%z')
         return date
 
-    def add_entry(self, calendar_id, name, timezone, start_date, end_date, description=None, source=None):
+    def datetime_floor(self, dt):
+        dt_floor = dt - timedelta(seconds=dt.second, microseconds=dt.microsecond)
+        return dt_floor
+
+    def add_entry(self, calendar, name, timezone, start_date, end_date, description=None, source=None):
         data = {
             'summary': name,
             'start': {
@@ -129,7 +133,7 @@ class GCalAPI():
                 'url': source['url'],
             }
 
-        response = self.service.events().insert(calendarId=calendar_id, body=data).execute()
+        response = self.service.events().insert(calendarId=self.calendar_ids[calendar], body=data).execute()
         return response['id']
 
 

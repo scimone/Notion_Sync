@@ -1,6 +1,6 @@
 import os
 from notion_client import Client
-from datetime import datetime
+from datetime import datetime, timedelta
 
 
 class NotionAPI():
@@ -80,16 +80,20 @@ class NotionAPI():
             else:
                 entries['last_updated'].append(None)
 
+            if self.properties['Last Edited'] > self.properties['Last Updated']:
+                entries['needs_update'].append(True)
+                print(item['properties'][self.properties['Name']]['title'][0]['text']['content'])
+            else:
+                entries['needs_update'].append(False)
+
             entries['names'].append(item['properties'][self.properties['Name']]['title'][0]['text']['content'])
             entries['start_dates'].append(self.parse_date(item['properties'][self.properties['Date']]['date']['start']))
             entries['end_dates'].append(self.parse_date(item['properties'][self.properties['Date']]['date']['end']))
-            entries['needs_update'].append(item['properties'][self.properties['Needs Update?']]['formula']['boolean'])
             entries['notion_ids'].append(item['id'])
 
         return entries
 
-    def format_date(self, date):
-        timezone_appendix = '+02:00'  # TODO: centralize
+    def format_date(self, date, timezone_appendix='+02:00'):  # TODO timezone stuff
         return date.strftime("%Y-%m-%dT%H:%M:%S" + timezone_appendix)
 
     def parse_date(self, date):
@@ -122,7 +126,7 @@ class NotionAPI():
                 self.properties['Last Updated']: {
                     "type": 'date',
                     'date': {
-                        'start': self.format_date(datetime.now()),
+                        'start': self.format_date(datetime.now() - timedelta(hours=2), timezone_appendix='+00:00'),
                     }
                 }
             }
@@ -160,7 +164,7 @@ class NotionAPI():
                 self.properties['Last Updated']: {
                     "type": 'date',
                     'date': {
-                        'start': self.format_date(datetime.now()),
+                        'start': self.format_date(datetime.now() - timedelta(hours=2), timezone_appendix='+00:00'),  # TODO: timezone stuff
                     }
                 }
             },
@@ -193,6 +197,16 @@ class NotionAPI():
             data['properties'][self.properties['Duration']] = {}
             data['properties'][self.properties['Duration']]['type'] = 'number'
             data['properties'][self.properties['Duration']]['number'] = duration
+
+        if gcal_id:
+            data['properties'][self.properties['GCal ID']] = {}
+            data['properties'][self.properties['GCal ID']]['type'] = 'rich_text'
+            data['properties'][self.properties['GCal ID']]['rich_text'] = [{'text': {'content': gcal_id}}]
+
+        if category:
+            data['properties'][self.properties['Category']] = {}
+            data['properties'][self.properties['Category']]['select'] = {'name': category}
+
         response = self.client.pages.update(**data)
         return response
 
