@@ -136,6 +136,25 @@ class GCalAPI():
         response = self.service.events().insert(calendarId=self.calendar_ids[calendar], body=data).execute()
         return response['id']
 
+    def update_entry(self, calendar, gcal_id, name, timezone, start_date, end_date, description=None, source=None):
+        data = {
+            'summary': name,
+            'start': {
+                'dateTime': self.format_date(start_date),
+                'timeZone': timezone,
+            },
+            'end': {
+                'dateTime': self.format_date(end_date),
+                'timeZone': timezone,
+            },
+        }
 
-    def update_entry(self):
-        pass
+        if description:
+            data['description'] = description
+        if source:
+            data['source'] = {
+                'title': source['title'],
+                'url': source['url'],
+            }
+        response = self.service.events().update(calendarId=self.calendar_ids[calendar], eventId=gcal_id, body=data).execute()
+        return response
