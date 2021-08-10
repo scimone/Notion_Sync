@@ -1,10 +1,12 @@
 import os
 from notion_client import Client
 from datetime import datetime, timedelta
+import pytz
 
 
 class NotionAPI():
-    def __init__(self, notion_config):
+    def __init__(self, timezone, notion_config):
+        self.timezone = timezone
         self.api_key = notion_config['API Key']
         self.database_id = notion_config['Database ID']
         self.properties = notion_config['Properties']
@@ -27,13 +29,13 @@ class NotionAPI():
                         {
                             "property": self.properties['Date'],
                             "date": {
-                                "on_or_after": self.format_date(time_min)
+                                "on_or_after": self.format_date(time_min, self.timezone)
                             }
                         },
                         {
                             "property": self.properties['Date'],
                             "date": {
-                                "before": self.format_date(time_max)
+                                "before": self.format_date(time_max, self.timezone)
                             }
                         }
                     ]
@@ -96,8 +98,19 @@ class NotionAPI():
 
         return entries
 
-    def format_date(self, date, timezone_appendix='+02:00'):  # TODO timezone stuff
-        return date.strftime("%Y-%m-%dT%H:%M:%S" + timezone_appendix)
+    # def format_date(self, date):
+    #     if type(date) is datetime and (date.tzinfo is None or date.tzinfo.utcoffset(date) is None):
+    #         tz = pytz.timezone(self.timezone)
+    #         date = tz.localize(date)
+    #     return date.strftime("%Y-%m-%dT%H:%M:%S%z")
+
+    def format_date(self, date, timezone):
+        if type(date) is not datetime:
+            date = datetime(date.year, date.month, date.day)
+        if date.tzinfo is None or date.tzinfo.utcoffset(date) is None:
+            tz = pytz.timezone(timezone)
+            date = tz.localize(date)
+        return date.strftime("%Y-%m-%dT%H:%M:%S%z")
 
     def parse_date(self, date):
         if date:  # if not None
@@ -129,7 +142,7 @@ class NotionAPI():
                 self.properties['Last Updated']: {
                     "type": 'date',
                     'date': {
-                        'start': self.format_date(datetime.now() - timedelta(hours=2), timezone_appendix='+00:00'),
+                        'start': self.format_date(datetime.utcnow(), 'UTC'),
                     }
                 }
             }
@@ -138,10 +151,10 @@ class NotionAPI():
         if start_date:
             data['properties'][self.properties['Date']] = {}
             data['properties'][self.properties['Date']]['type'] = 'date'
-            data['properties'][self.properties['Date']]['date'] = {'start': self.format_date(start_date)}
+            data['properties'][self.properties['Date']]['date'] = {'start': self.format_date(start_date, self.timezone)}
 
             if end_date:
-                data['properties'][self.properties['Date']]['date']['end'] = self.format_date(end_date)
+                data['properties'][self.properties['Date']]['date']['end'] = self.format_date(end_date, self.timezone)
 
         if duration:
             data['properties'][self.properties['Duration']] = {}
@@ -167,7 +180,7 @@ class NotionAPI():
                 self.properties['Last Updated']: {
                     "type": 'date',
                     'date': {
-                        'start': self.format_date(datetime.now() - timedelta(hours=2), timezone_appendix='+00:00'),  # TODO: timezone stuff
+                        'start': self.format_date(datetime.utcnow(), 'UTC'),
                     }
                 }
             },
@@ -193,8 +206,8 @@ class NotionAPI():
         if start_date and end_date:
             data['properties'][self.properties['Date']] = {}
             data['properties'][self.properties['Date']]['type'] = 'date'
-            data['properties'][self.properties['Date']]['date'] = {'start': self.format_date(start_date),
-                                                                   'end': self.format_date(end_date)}
+            data['properties'][self.properties['Date']]['date'] = {'start': self.format_date(start_date, self.timezone),
+                                                                   'end': self.format_date(end_date, self.timezone)}
 
         if duration:
             data['properties'][self.properties['Duration']] = {}

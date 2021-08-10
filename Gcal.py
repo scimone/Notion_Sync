@@ -4,10 +4,12 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from datetime import datetime, timedelta
 import pickle
+import pytz
 
 
 class GCalAPI():
-    def __init__(self, gcal_config):
+    def __init__(self, timezone, gcal_config):
+        self.timezone = timezone
         self.default_calendar = gcal_config['Default Calendar']
         self.default_event_start = gcal_config['Default Event Start']
         self.default_event_length = gcal_config['Default Event Length']
@@ -94,9 +96,12 @@ class GCalAPI():
         return entries
 
     def format_date(self, date):
-        timezone_appendix = '+02:00'  # TODO: centralize
-        return date.strftime("%Y-%m-%dT%H:%M:%S") + timezone_appendix  # Change the last 5 characters to be representative of your timezone
-        # ^^ has to be adjusted for when daylight savings is different if your area observes it
+        if type(date) is not datetime:
+            date = datetime(date.year, date.month, date.day)
+        if date.tzinfo is None or date.tzinfo.utcoffset(date) is None:
+            tz = pytz.timezone(self.timezone)
+            date = tz.localize(date)
+        return date.strftime("%Y-%m-%dT%H:%M:%S%z")
 
     def parse_date(self, date):
         if type(date) is dict:
@@ -112,16 +117,16 @@ class GCalAPI():
         dt_floor = dt - timedelta(seconds=dt.second, microseconds=dt.microsecond)
         return dt_floor
 
-    def add_entry(self, calendar, name, timezone, start_date, end_date, description=None, source=None):
+    def add_entry(self, calendar, name, start_date, end_date, description=None, source=None):
         data = {
             'summary': name,
             'start': {
                 'dateTime': self.format_date(start_date),
-                'timeZone': timezone,
+                'timeZone': self.timezone,
             },
             'end': {
                 'dateTime': self.format_date(end_date),
-                'timeZone': timezone,
+                'timeZone': self.timezone,
             },
         }
 
@@ -136,16 +141,16 @@ class GCalAPI():
         response = self.service.events().insert(calendarId=self.calendar_ids[calendar], body=data).execute()
         return response['id']
 
-    def update_entry(self, calendar, gcal_id, name, timezone, start_date, end_date, description=None, source=None):
+    def update_entry(self, calendar, gcal_id, name, start_date, end_date, description=None, source=None):
         data = {
             'summary': name,
             'start': {
                 'dateTime': self.format_date(start_date),
-                'timeZone': timezone,
+                'timeZone': self.timezone,
             },
             'end': {
                 'dateTime': self.format_date(end_date),
-                'timeZone': timezone,
+                'timeZone': self.timezone,
             },
         }
 

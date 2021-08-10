@@ -69,7 +69,7 @@ def bring_new_events_to_gcal(notion, gcal, notion_entries):
                 duration = gcal_config['Default Event Length']
             end_date = start_date + timedelta(hours=duration)
         page_id = notion_entries['notion_ids'][idx]
-        gcal_id = gcal.add_entry(calendar=calendar, name=name, timezone=timezone, start_date=start_date, end_date=end_date, description=None, source=None)
+        gcal_id = gcal.add_entry(calendar=calendar, name=name, start_date=start_date, end_date=end_date, description=None, source=None)
         duration = (end_date - start_date).seconds / 3600
         notion.update_entry(page_id=page_id, gcal_id=gcal_id, category=calendar, duration=duration, start_date=start_date, end_date=end_date)
         print("Added '{}' to GCal.".format(name))
@@ -98,7 +98,7 @@ def update_events_in_gcal(notion, gcal, notion_entries):
             if not duration:
                 duration = gcal_config['Default Event Length']
             end_date = start_date + timedelta(hours=duration)
-        gcal.update_entry(calendar=calendar, gcal_id=gcal_id, name=name, timezone=timezone, start_date=start_date, end_date=end_date, description=None, source=None)
+        gcal.update_entry(calendar=calendar, gcal_id=gcal_id, name=name, start_date=start_date, end_date=end_date, description=None, source=None)
         notion.update_entry(page_id=page_id)
         print("Updated '{}' in GCal.".format(name))
 
@@ -106,8 +106,8 @@ def update_events_in_gcal(notion, gcal, notion_entries):
 def run_notion_gcal_sync():
     print('{} start syncing'.format(datetime.now()))
     # set up APIs
-    gcal = GCalAPI(gcal_config)
-    notion = NotionAPI(notion_config)
+    gcal = GCalAPI(timezone, gcal_config)
+    notion = NotionAPI(timezone, notion_config)
 
     # get all entries from today to next month
     today = date.today()

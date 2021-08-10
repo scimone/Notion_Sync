@@ -1,5 +1,5 @@
 from apscheduler.schedulers.blocking import BlockingScheduler
-from main import run_notion_gcal_sync
+from Main import run_notion_gcal_sync
 
 
 if __name__ == '__main__':
