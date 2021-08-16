@@ -1,13 +1,9 @@
 from Notion import NotionAPI
 from Gcal import GCalAPI
-# from config import notion_config, gcal_config, timezone
 from datetime import datetime, timedelta, date
 import numpy as np
 import os
 
-print("teeeest")
-# test
-print(os.environ['notion_config'])
 
 def bring_new_events_to_notion(notion, gcal_entries, notion_entries):
     # find events that have been newly created in gcal and not added to notion yet
@@ -107,7 +103,7 @@ def update_events_in_gcal(notion, gcal, notion_entries):
         print("Updated '{}' in GCal.".format(name))
 
 
-def run_notion_gcal_sync():
+def run_notion_gcal_sync(timezone, notion_config, gcal_config):
     print('{} start syncing'.format(datetime.now()))
     # set up APIs
     gcal = GCalAPI(timezone, gcal_config)
@@ -130,4 +126,7 @@ def run_notion_gcal_sync():
 
 
 if __name__ == '__main__':
-    run_notion_gcal_sync()
+    timezone = os.environ['timezone']
+    notion_config = os.environ['notion_config']
+    gcal_config = os.environ['gcal_config']
+    run_notion_gcal_sync(timezone, notion_config, gcal_config)
