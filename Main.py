@@ -1,6 +1,6 @@
 from Notion import NotionAPI
 from Gcal import GCalAPI
-from config import notion_config, gcal_config, timezone
+# from config import notion_config, gcal_config, timezone
 from datetime import datetime, timedelta, date
 import numpy as np
 import os
