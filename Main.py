@@ -3,6 +3,7 @@ from Gcal import GCalAPI
 from config import notion_config, gcal_config, timezone
 from datetime import datetime, timedelta, date
 import numpy as np
+# test
 
 
 def bring_new_events_to_notion(notion, gcal_entries, notion_entries):
