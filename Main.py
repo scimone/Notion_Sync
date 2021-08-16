@@ -103,7 +103,10 @@ def update_events_in_gcal(notion, gcal, notion_entries):
         print("Updated '{}' in GCal.".format(name))
 
 
-def run_notion_gcal_sync(timezone, notion_config, gcal_config):
+def run_notion_gcal_sync():
+    timezone = os.environ['tz']
+    notion_config = os.environ['notion_config']
+    gcal_config = os.environ['gcal_config']
     print('{} start syncing'.format(datetime.now()))
     # set up APIs
     gcal = GCalAPI(timezone, gcal_config)
@@ -126,7 +129,4 @@ def run_notion_gcal_sync(timezone, notion_config, gcal_config):
 
 
 if __name__ == '__main__':
-    timezone = os.environ['tz']
-    notion_config = os.environ['notion_config']
-    gcal_config = os.environ['gcal_config']
-    run_notion_gcal_sync(timezone, notion_config, gcal_config)
+    run_notion_gcal_sync()
