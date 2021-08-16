@@ -3,7 +3,11 @@ from Gcal import GCalAPI
 from config import notion_config, gcal_config, timezone
 from datetime import datetime, timedelta, date
 import numpy as np
+import os
 
+print("teeeest")
+# test
+print(os.environ['notion_config'])
 
 def bring_new_events_to_notion(notion, gcal_entries, notion_entries):
     # find events that have been newly created in gcal and not added to notion yet
