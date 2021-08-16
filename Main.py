@@ -126,7 +126,7 @@ def run_notion_gcal_sync(timezone, notion_config, gcal_config):
 
 
 if __name__ == '__main__':
-    timezone = os.environ['timezone']
+    timezone = os.environ['tz']
     notion_config = os.environ['notion_config']
     gcal_config = os.environ['gcal_config']
     run_notion_gcal_sync(timezone, notion_config, gcal_config)
