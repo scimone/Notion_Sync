@@ -3,7 +3,8 @@ flask
 flask_restful
 requests
 gunicorn
-APScheduler==4.0.0
+tzlocal<3.0
+APScheduler==3.0.0
 PyYAML
 google-api-python-client==2.6.0
 google-auth-oauthlib==0.4.4
