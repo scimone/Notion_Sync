@@ -10,6 +10,7 @@ import pytz
 class GCalAPI():
     def __init__(self, timezone, gcal_config):
         self.timezone = timezone
+        print(gcal_config)
         self.default_calendar = gcal_config['Default Calendar']
         self.default_event_start = gcal_config['Default Event Start']
         self.default_event_length = gcal_config['Default Event Length']
