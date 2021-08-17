@@ -3,6 +3,7 @@ from Gcal import GCalAPI
 from datetime import datetime, timedelta, date
 import numpy as np
 import os
+import json
 
 
 def bring_new_events_to_notion(notion, gcal_entries, notion_entries):
@@ -105,8 +106,8 @@ def update_events_in_gcal(notion, gcal, notion_entries):
 
 def run_notion_gcal_sync():
     timezone = os.environ['tz']
-    notion_config = os.environ['notion_config']
-    gcal_config = os.environ['gcal_config']
+    notion_config = json.loads(os.environ['notion_config'])
+    gcal_config = json.loads(os.environ['gcal_config'])
     print('{} start syncing'.format(datetime.now()))
     # set up APIs
     gcal = GCalAPI(timezone, gcal_config)
