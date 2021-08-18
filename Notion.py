@@ -17,9 +17,6 @@ class NotionAPI():
         client = Client(auth=os.environ['NOTION_TOKEN'])
         return client
 
-    # def format_date(self, date):
-    #     return date.strftime("%Y-%m-%d")
-
     def query(self, time_min, time_max):
         response = self.client.databases.query(
             **{
@@ -97,12 +94,6 @@ class NotionAPI():
             entries['notion_ids'].append(item['id'])
 
         return entries
-
-    # def format_date(self, date):
-    #     if type(date) is datetime and (date.tzinfo is None or date.tzinfo.utcoffset(date) is None):
-    #         tz = pytz.timezone(self.timezone)
-    #         date = tz.localize(date)
-    #     return date.strftime("%Y-%m-%dT%H:%M:%S%z")
 
     def format_date(self, date, timezone):
         if type(date) is not datetime:

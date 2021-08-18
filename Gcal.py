@@ -1,10 +1,6 @@
-import os
 from googleapiclient.discovery import build
-from google_auth_oauthlib.flow import InstalledAppFlow
-from google.auth.transport.requests import Request
 from google.oauth2 import service_account
 from datetime import datetime, timedelta
-import pickle
 import pytz
 
 
@@ -27,34 +23,6 @@ class GCalAPI():
     def get_credentials(self):
         scopes = ['https://www.googleapis.com/auth/calendar']
         credentials = service_account.Credentials.from_service_account_file(self.service_account_file, scopes=scopes)
-        return credentials
-
-    # def get_credentials(self):
-    #     if os.path.isfile("token.pkl"):
-    #         credentials = self._load_credentials()
-    #     else:
-    #         credentials = None
-    #
-    #     if not (credentials and credentials.valid):
-    #         if credentials:
-    #             credentials.refresh(Request())  # refresh credentials
-    #         else:
-    #             credentials = self._setup_credentials()
-    #         self._save_credentials(credentials)
-    #
-    #     return credentials
-
-    def _setup_credentials(self):
-        scopes = ['https://www.googleapis.com/auth/calendar']
-        flow = InstalledAppFlow.from_client_secrets_file('client_secret.json', scopes=scopes)
-        credentials = flow.run_local_server(port=0)
-        return credentials
-
-    def _save_credentials(self, credentials):
-        pickle.dump(credentials, open("token.pkl", "wb"))
-
-    def _load_credentials(self):
-        credentials = pickle.load(open("token.pkl", "rb"))
         return credentials
 
     def query(self, time_min, time_max):

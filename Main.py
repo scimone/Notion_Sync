@@ -109,6 +109,7 @@ def run_notion_gcal_sync():
     notion_config = json.loads(os.environ['notion_config'])
     gcal_config = json.loads(os.environ['gcal_config'])
     print('{} start syncing'.format(datetime.now()))
+
     # set up APIs
     gcal = GCalAPI(timezone, gcal_config)
     notion = NotionAPI(timezone, notion_config)
