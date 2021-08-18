@@ -48,7 +48,7 @@ def update_events_in_notion(notion, gcal_entries, notion_entries):
         print("Updated '{}' in Notion.".format(name))
 
 
-def bring_new_events_to_gcal(notion, gcal, notion_entries):
+def bring_new_events_to_gcal(gcal_config, notion, gcal, notion_entries):
     # events that have been newly created in notion and not added to gcal yet
     idx_new_notion_events = np.where(np.array(notion_entries['gcal_ids']) == None)[0]
 
@@ -76,7 +76,7 @@ def bring_new_events_to_gcal(notion, gcal, notion_entries):
         print("Added '{}' to GCal.".format(name))
 
 
-def update_events_in_gcal(notion, gcal, notion_entries):
+def update_events_in_gcal(gcal_config, notion, gcal, notion_entries):
     # events that have been modified in notion since last update
     idx_modified_notion_events = np.where(np.array(notion_entries['needs_update']))[0]
 
@@ -123,8 +123,8 @@ def run_notion_gcal_sync():
     # sync events
     bring_new_events_to_notion(notion, gcal_entries, notion_entries)
     update_events_in_notion(notion, gcal_entries, notion_entries)
-    bring_new_events_to_gcal(notion, gcal, notion_entries)
-    update_events_in_gcal(notion, gcal, notion_entries)
+    bring_new_events_to_gcal(gcal_config, notion, gcal, notion_entries)
+    update_events_in_gcal(gcal_config, notion, gcal, notion_entries)
 
     print('{} finished syncing'.format(datetime.now()))
 
