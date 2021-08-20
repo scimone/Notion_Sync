@@ -104,31 +104,45 @@ def update_events_in_gcal(gcal_config, notion, gcal, notion_entries):
         print("Updated '{}' in GCal.".format(name))
 
 
-def run_notion_gcal_sync():
-    timezone = os.environ['tz']
-    notion_config = json.loads(os.environ['notion_config'])
+def run_sync(notion, todoist, gcal):
+    # notion_config = json.loads(os.environ['notion_config'])
     gcal_config = json.loads(os.environ['gcal_config'])
-    print('{} start syncing'.format(datetime.now()))
-
-    # set up APIs
-    gcal = GCalAPI(timezone, gcal_config)
-    notion = NotionAPI(timezone, notion_config)
 
     # get all entries from today to next month
     today = date.today()
     time_min = today - timedelta(seconds=1)
     time_max = today + timedelta(days=30)
-    gcal_entries = gcal.query(time_min, time_max)
     notion_entries = notion.query(time_min, time_max)
 
-    # sync events
-    bring_new_events_to_notion(notion, gcal_entries, notion_entries)
-    update_events_in_notion(notion, gcal_entries, notion_entries)
-    bring_new_events_to_gcal(gcal_config, notion, gcal, notion_entries)
-    update_events_in_gcal(gcal_config, notion, gcal, notion_entries)
+    if os.environ['SYNC_TODOIST'] == "True":
+        todoist_entries = todoist.get_tasks()
+        # loop through updated todoist tasks:
+            # if id in notion db:
+                # update notion entry
+            # else:
+                # make new notion entry
+        # bring all new notion tasks to todoist
+        idx_new_notion_events = np.where(np.array(notion_entries['todoist_ids']) == None)[0]  # and category == "tasks"
+        # update changed tasks in todoist
+        idx_modified_notion_events = np.where(np.array(notion_entries['needs_update']))[0]  # and category == "tasks"
 
-    print('{} finished syncing'.format(datetime.now()))
+    if os.environ['SYNC_GCAL'] == "True":
+        print('{} start notion/gcal sync'.format(datetime.now()))
+
+        # # set up APIs
+        # gcal = GCalAPI(timezone, gcal_config)
+        # notion = NotionAPI(timezone, notion_config)
+
+        gcal_entries = gcal.query(time_min, time_max)
+
+        # sync events
+        bring_new_events_to_notion(notion, gcal_entries, notion_entries)
+        update_events_in_notion(notion, gcal_entries, notion_entries)
+        bring_new_events_to_gcal(gcal_config, notion, gcal, notion_entries)
+        update_events_in_gcal(gcal_config, notion, gcal, notion_entries)
+
+        print('{} finished notion/gcal sync'.format(datetime.now()))
 
 
 if __name__ == '__main__':
-    run_notion_gcal_sync()
+    run_sync()
