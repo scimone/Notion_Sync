@@ -116,6 +116,14 @@ def run_sync(notion, todoist, gcal):
 
     if sync_todoist:
         todoist_entries = todoist.get_tasks()
+        for task in todoist_entries:
+            if str(task['id']) in notion_entries['todoist_ids']:
+                # update notion entry
+                pass
+            else:
+                # make new notion entry
+                pass
+
         # loop through updated todoist tasks:
         # if id in notion db:
         # update notion entry

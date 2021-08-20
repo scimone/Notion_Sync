@@ -179,7 +179,7 @@ class NotionAPI():
         response = self.client.pages.create(**data)
         return response
 
-    def update_entry(self, page_id, name=None, start_date=None, end_date=None, duration=None, gcal_id=None, category=None):
+    def update_entry(self, page_id, name=None, start_date=None, end_date=None, duration=None, gcal_id=None, todoist_id=None, category=None):
         data = {
             "page_id": page_id,
             "properties": {
@@ -224,6 +224,11 @@ class NotionAPI():
             data['properties'][self.properties['GCal ID']] = {}
             data['properties'][self.properties['GCal ID']]['type'] = 'rich_text'
             data['properties'][self.properties['GCal ID']]['rich_text'] = [{'text': {'content': gcal_id}}]
+
+        if todoist_id:
+            data['properties'][self.properties['Todoist ID']] = {}
+            data['properties'][self.properties['Todoist ID']]['type'] = 'rich_text'
+            data['properties'][self.properties['Todoist ID']]['rich_text'] = [{'text': {'content': todoist_id}}]
 
         if category:
             data['properties'][self.properties['Category']] = {}
