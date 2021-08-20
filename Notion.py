@@ -53,7 +53,7 @@ class NotionAPI():
             'categories': [],
             'durations': [],
             'gcal_ids': [],
-            'todoist_ids': []
+            'todoist_ids': [],
             'last_updated': [],
             'needs_update': [],
             'notion_ids': []
