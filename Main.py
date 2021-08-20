@@ -1,6 +1,6 @@
 from Notion import NotionAPI
 from Gcal import GCalAPI
-from config import notion_config, gcal_config, timezone
+from config import notion_config, gcal_config, timezone, sync_gcal, sync_todoist
 from datetime import datetime, timedelta, date
 import numpy as np
 # test
@@ -104,27 +104,40 @@ def update_events_in_gcal(notion, gcal, notion_entries):
         print("Updated '{}' in GCal.".format(name))
 
 
-def run_notion_gcal_sync():
-    print('{} start syncing'.format(datetime.now()))
-    # set up APIs
-    gcal = GCalAPI(timezone, gcal_config)
-    notion = NotionAPI(timezone, notion_config)
+def run_sync():
+    if sync_todoist:
+        todoist_entries = todoist.get_tasks()
+        # loop through updated todoist tasks:
+        # if id in notion db:
+        # update notion entry
+        # else:
+        # make new notion entry
+        # bring all new notion tasks to todoist
+        idx_new_notion_events = np.where(np.array(notion_entries['todoist_ids']) == None)[0]  # and category == "tasks"
+        # update changed tasks in todoist
+        idx_modified_notion_events = np.where(np.array(notion_entries['needs_update']))[0]  # and category == "tasks"
 
-    # get all entries from today to next month
-    today = date.today()
-    time_min = today - timedelta(seconds=1)
-    time_max = today + timedelta(days=30)
-    gcal_entries = gcal.query(time_min, time_max)
-    notion_entries = notion.query(time_min, time_max)
+    if sync_gcal:
+        print('{} start syncing gcal'.format(datetime.now()))
+        # set up APIs
+        gcal = GCalAPI(timezone, gcal_config)
+        notion = NotionAPI(timezone, notion_config)
 
-    # sync events
-    bring_new_events_to_notion(notion, gcal_entries, notion_entries)
-    update_events_in_notion(notion, gcal_entries, notion_entries)
-    bring_new_events_to_gcal(notion, gcal, notion_entries)
-    update_events_in_gcal(notion, gcal, notion_entries)
+        # get all entries from today to next month
+        today = date.today()
+        time_min = today - timedelta(seconds=1)
+        time_max = today + timedelta(days=30)
+        gcal_entries = gcal.query(time_min, time_max)
+        notion_entries = notion.query(time_min, time_max)
 
-    print('{} finished syncing'.format(datetime.now()))
+        # sync events
+        bring_new_events_to_notion(notion, gcal_entries, notion_entries)
+        update_events_in_notion(notion, gcal_entries, notion_entries)
+        bring_new_events_to_gcal(notion, gcal, notion_entries)
+        update_events_in_gcal(notion, gcal, notion_entries)
+
+        print('{} finished syncing gcal'.format(datetime.now()))
 
 
 if __name__ == '__main__':
-    run_notion_gcal_sync()
+    run_sync()

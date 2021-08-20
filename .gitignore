@@ -130,3 +130,4 @@ dmypy.json
 /config.py
 /token.pkl
 /client_secret.json
+/google-credentials.json
