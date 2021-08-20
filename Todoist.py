@@ -6,7 +6,7 @@ class TodoIstAPI():
 
     def __init__(self, todoist_token):
         self.api = TodoistAPI(todoist_token)
-        self.api.sync()
+        self.api.sync();
         self.first_run = True
 
     def get_tasks(self):

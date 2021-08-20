@@ -1,8 +1,10 @@
+from Todoist import TodoIstAPI
 from Notion import NotionAPI
 from Gcal import GCalAPI
-from config import notion_config, gcal_config, timezone, sync_gcal, sync_todoist
+from config import notion_config, gcal_config, timezone, todoist_token, sync_gcal, sync_todoist
 from datetime import datetime, timedelta, date
 import numpy as np
+import os
 # test
 
 
@@ -104,7 +106,14 @@ def update_events_in_gcal(notion, gcal, notion_entries):
         print("Updated '{}' in GCal.".format(name))
 
 
-def run_sync():
+def run_sync(notion, todoist, gcal):
+    # get all entries from today to next month
+    today = date.today()
+    time_min = today - timedelta(seconds=1)
+    time_max = today + timedelta(days=30)
+
+    notion_entries = notion.query(time_min, time_max)
+
     if sync_todoist:
         todoist_entries = todoist.get_tasks()
         # loop through updated todoist tasks:
@@ -119,17 +128,11 @@ def run_sync():
 
     if sync_gcal:
         print('{} start syncing gcal'.format(datetime.now()))
-        # set up APIs
-        gcal = GCalAPI(timezone, gcal_config)
-        notion = NotionAPI(timezone, notion_config)
+        # # set up APIs
+        # gcal = GCalAPI(timezone, gcal_config)
+        # notion = NotionAPI(timezone, notion_config)
 
-        # get all entries from today to next month
-        today = date.today()
-        time_min = today - timedelta(seconds=1)
-        time_max = today + timedelta(days=30)
         gcal_entries = gcal.query(time_min, time_max)
-        notion_entries = notion.query(time_min, time_max)
-
         # sync events
         bring_new_events_to_notion(notion, gcal_entries, notion_entries)
         update_events_in_notion(notion, gcal_entries, notion_entries)
@@ -139,5 +142,35 @@ def run_sync():
         print('{} finished syncing gcal'.format(datetime.now()))
 
 
+def create_notion_api():
+    notion = NotionAPI(timezone, notion_config)
+    return notion
+
+
+def create_todoist_api():
+    todoist = TodoIstAPI(todoist_token)
+    return todoist
+
+
+def create_gcal_api():
+    gcal = GCalAPI(timezone, gcal_config)
+    return gcal
+
+
 if __name__ == '__main__':
-    run_sync()
+    notion = create_notion_api()
+
+    if sync_todoist and sync_gcal:
+        todoist = create_todoist_api()
+        gcal = create_gcal_api()
+    elif sync_todoist:
+        todoist = create_todoist_api()
+        gcal = None
+    elif sync_gcal:
+        gcal = create_gcal_api()
+        todoist = None
+    else:
+        todoist = None
+        gcal = None
+
+    run_sync(notion, todoist, gcal)

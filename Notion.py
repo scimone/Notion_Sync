@@ -53,6 +53,7 @@ class NotionAPI():
             'categories': [],
             'durations': [],
             'gcal_ids': [],
+            'todoist_ids': []
             'last_updated': [],
             'needs_update': [],
             'notion_ids': []
@@ -71,6 +72,11 @@ class NotionAPI():
                 entries['gcal_ids'].append(item['properties'][self.properties['GCal ID']]['rich_text'][0]['text']['content'])
             else:
                 entries['gcal_ids'].append(None)
+
+            if item['properties'][self.properties['Todoist ID']]['rich_text']:  # if not empty
+                entries['todoist_ids'].append(item['properties'][self.properties['Todoist ID']]['rich_text'][0]['text']['content'])
+            else:
+                entries['todoist_ids'].append(None)
 
             if self.properties['Duration'] in item_properties:
                 entries['durations'].append(item['properties'][self.properties['Duration']]['number'])
