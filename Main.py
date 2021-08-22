@@ -5,6 +5,9 @@ from config import notion_config, gcal_config, timezone, todoist_token, sync_gca
 from datetime import datetime, timedelta, date
 import numpy as np
 import os
+import pytz
+
+
 # test
 
 
@@ -52,11 +55,13 @@ def update_events_in_notion(notion, gcal_entries, notion_entries):
 
 def bring_new_events_to_gcal(notion, gcal, notion_entries):
     # events that have been newly created in notion and not added to gcal yet
-    idx_new_notion_events = np.where(np.array(notion_entries['gcal_ids']) == None)[0]
+    idx_new_notion_events = list(np.where(np.array(notion_entries['gcal_ids']) is None)[0])
+    idx_existing_start_dates = list(np.where(np.array(notion_entries['start_dates']) is not None)[0])
+    idx_notion = list(set(idx_new_notion_events).intersection(idx_existing_start_dates))
 
     # bring new events from notion to gcal
     calendar_names = gcal_config['Calendars'].keys()
-    for idx in idx_new_notion_events:
+    for idx in idx_notion:
         name = notion_entries['names'][idx]
         calendar = notion_entries['categories'][idx]
         start_date = notion_entries['start_dates'][idx]
@@ -80,11 +85,13 @@ def bring_new_events_to_gcal(notion, gcal, notion_entries):
 
 def update_events_in_gcal(notion, gcal, notion_entries):
     # events that have been modified in notion since last update
-    idx_modified_notion_events = np.where(np.array(notion_entries['needs_update']))[0]
+    idx_modified_notion_events = list(np.where(np.array(notion_entries['needs_update']))[0])
+    idx_existing_start_dates = list(np.where(np.array(notion_entries['start_dates']) is not None)[0])
+    idx_notion = list(set(idx_modified_notion_events).intersection(idx_existing_start_dates))
 
     # update events in gcal that have been updated in notion
     calendar_names = gcal_config['Calendars'].keys()
-    for idx in idx_modified_notion_events:
+    for idx in idx_notion:
         name = notion_entries['names'][idx]
         calendar = notion_entries['categories'][idx]
         start_date = notion_entries['start_dates'][idx]
@@ -106,40 +113,78 @@ def update_events_in_gcal(notion, gcal, notion_entries):
         print("Updated '{}' in GCal.".format(name))
 
 
-def run_sync(notion, todoist, gcal):
-    # get all entries from today to next month
+def get_min_max_dates(max=30):
     today = date.today()
-    time_min = today - timedelta(seconds=1)
-    time_max = today + timedelta(days=30)
+    time_min = today - timedelta(days=1)
+    time_max = today + timedelta(days=max)
+    return today, time_min, time_max
 
+
+def run_sync(notion, todoist, gcal):
+    today, time_min, time_max = get_min_max_dates(max=30)
     notion_entries = notion.query(time_min, time_max)
 
     if sync_todoist:
+        print("start todoist sync")
         todoist_entries = todoist.get_tasks()
         for task in todoist_entries:
             if str(task['id']) in notion_entries['todoist_ids']:
                 # update notion entry
-                pass
+                notion_idx = notion_entries['todoist_ids'].index(str(task['id']))  # find index of the matching id to get the notion page id
+                page_id = notion_entries['notion_ids'][notion_idx]
+
+                if task['due']:
+                    prop = todoist.get_task_properties(task, name=True, task_id=True, done=True, labels=True, priority=True, date=True)
+                    if notion_entries['start_dates'][notion_idx] != prop['start_date']:
+                        notion.update_entry(page_id=page_id,
+                                            name=prop['name'],
+                                            start_date=prop['start_date'],
+                                            end_date=prop['end_date'],
+                                            duration=prop['duration'],
+                                            todoist_id=prop['id'],
+                                            done=prop['done'],
+                                            labels=prop['labels'],
+                                            priority=prop['priority'])
+                    else:
+                        prop = todoist.get_task_properties(task, name=True, task_id=True, done=True, labels=True, priority=True)
+                        notion.update_entry(page_id=page_id, name=prop['name'], todoist_id=prop['id'], done=prop['done'], labels=prop['labels'], priority=prop['priority'])
+                print("Updated '{}' in Notion.".format(task['content']))
             else:
                 # make new notion entry
-                pass
+                if task['due']:
+                    prop = todoist.get_task_properties(task, name=True, task_id=True, done=True, labels=True, priority=True, date=True)
 
-        # loop through updated todoist tasks:
-        # if id in notion db:
-        # update notion entry
-        # else:
-        # make new notion entry
+                    if time_min + timedelta(days=1) <= prop['start_date'].date() < time_max:
+                        notion.add_entry(name=prop['name'],
+                                         start_date=prop['start_date'],
+                                         end_date=prop['end_date'],
+                                         duration=prop['duration'],
+                                         todoist_id=prop['id'],
+                                         category="Tasks",  # TODO: default calendar
+                                         done=prop['done'],
+                                         labels=prop['labels'],
+                                         priority=prop['priority'])
+                        print("Added '{}' to Notion.".format(task['content']))
+                else:
+                    prop = todoist.get_task_properties(task, name=True, task_id=True, done=True, labels=True, priority=True)
+                    notion.add_entry(name=prop['name'], todoist_id=prop['id'], category="Tasks", done=prop['done'], labels=prop['labels'], priority=prop['priority'])
+                    print("Added '{}' to Notion.".format(task['content']))
+
         # bring all new notion tasks to todoist
         idx_new_notion_events = np.where(np.array(notion_entries['todoist_ids']) == None)[0]  # and category == "tasks"
+        idx_tasks = list(np.where(np.array(notion_entries['category']) is "Tasks")[0])  # TODO: default calendar
+        idx_notion = list(set(idx_new_notion_events).intersection(idx_tasks))
+
         # update changed tasks in todoist
         idx_modified_notion_events = np.where(np.array(notion_entries['needs_update']))[0]  # and category == "tasks"
+        idx_tasks = list(np.where(np.array(notion_entries['category']) is "Tasks")[0])  # TODO: default calendar
+        idx_notion = list(set(idx_modified_notion_events).intersection(idx_tasks))
+        print("end todoist sync")
 
     if sync_gcal:
         print('{} start syncing gcal'.format(datetime.now()))
-        # # set up APIs
-        # gcal = GCalAPI(timezone, gcal_config)
-        # notion = NotionAPI(timezone, notion_config)
-
+        # idx_notion_entries_with_date = np.where(np.array(notion_entries['start_dates']) != None)[0]
+        # notion_entries_with_date = [notion_entries[i] for i in idx_notion_entries_with_date]
         gcal_entries = gcal.query(time_min, time_max)
         # sync events
         bring_new_events_to_notion(notion, gcal_entries, notion_entries)

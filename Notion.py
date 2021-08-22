@@ -25,20 +25,29 @@ class NotionAPI():
             **{
                 "database_id": self.database_id,
                 "filter": {
-                    "and": [
+                    "or": [{
+                        "and": [
+                            {
+                                "property": self.properties['Date'],
+                                "date": {
+                                    "on_or_after": self.format_date(time_min)
+                                }
+                            },
+                            {
+                                "property": self.properties['Date'],
+                                "date": {
+                                    "before": self.format_date(time_max)
+                                }
+                            }
+                        ]
+                    },
                         {
                             "property": self.properties['Date'],
                             "date": {
-                                "on_or_after": self.format_date(time_min, self.timezone)
+                                "is_empty": True
                             }
                         },
-                        {
-                            "property": self.properties['Date'],
-                            "date": {
-                                "before": self.format_date(time_max, self.timezone)
-                            }
-                        }
-                    ]
+                    ],
                 },
             }
         )
@@ -98,8 +107,12 @@ class NotionAPI():
                 entries['needs_update'].append(False)
 
             entries['names'].append(item['properties'][self.properties['Name']]['title'][0]['text']['content'])
-            entries['start_dates'].append(self.parse_date(item['properties'][self.properties['Date']]['date']['start']))
-            entries['end_dates'].append(self.parse_date(item['properties'][self.properties['Date']]['date']['end']))
+            if self.properties['Date'] in item_properties:
+                entries['start_dates'].append(self.parse_date(item['properties'][self.properties['Date']]['date']['start']))
+                entries['end_dates'].append(self.parse_date(item['properties'][self.properties['Date']]['date']['end']))
+            else:
+                entries['start_dates'].append(None)
+                entries['end_dates'].append(None)
             entries['notion_ids'].append(item['id'])
 
         return entries
@@ -110,10 +123,10 @@ class NotionAPI():
     #         date = tz.localize(date)
     #     return date.strftime("%Y-%m-%dT%H:%M:%S%z")
 
-    def format_date(self, date, timezone):
+    def format_date(self, date, timezone=None):
         if type(date) is not datetime:
             date = datetime(date.year, date.month, date.day)
-        if date.tzinfo is None or date.tzinfo.utcoffset(date) is None:
+        if (date.tzinfo is None or date.tzinfo.utcoffset(date) is None) and timezone:
             tz = pytz.timezone(timezone)
             date = tz.localize(date)
         return date.strftime("%Y-%m-%dT%H:%M:%S%z")
@@ -128,7 +141,7 @@ class NotionAPI():
         else:
             return None
 
-    def add_entry(self, name, start_date=None, end_date=None, duration=None, gcal_id=None, category=None):
+    def add_entry(self, name, start_date=None, end_date=None, duration=None, gcal_id=None, todoist_id=None, category=None, done=None, labels=None, priority=None):
         data = {
             "parent": {
                 "database_id": self.database_id,
@@ -172,14 +185,32 @@ class NotionAPI():
             data['properties'][self.properties['GCal ID']]['type'] = 'rich_text'
             data['properties'][self.properties['GCal ID']]['rich_text'] = [{'text': {'content': gcal_id}}]
 
+        if todoist_id:
+            data['properties'][self.properties['Todoist ID']] = {}
+            data['properties'][self.properties['Todoist ID']]['type'] = 'rich_text'
+            data['properties'][self.properties['Todoist ID']]['rich_text'] = [{'text': {'content': todoist_id}}]
+
         if category:
             data['properties'][self.properties['Category']] = {}
             data['properties'][self.properties['Category']]['select'] = {'name': category}
 
+        if labels:
+            options = [{'name': label} for label in labels]
+            data['properties'][self.properties['Labels']] = {}
+            data['properties'][self.properties['Labels']]['multi_select'] = options
+
+        if done is not None:
+            data['properties'][self.properties['Done']] = {}
+            data['properties'][self.properties['Done']]['checkbox'] = done
+
+        if priority:
+            data['properties'][self.properties['Priority']] = {}
+            data['properties'][self.properties['Priority']]['select'] = {'name': priority}
+
         response = self.client.pages.create(**data)
         return response
 
-    def update_entry(self, page_id, name=None, start_date=None, end_date=None, duration=None, gcal_id=None, todoist_id=None, category=None):
+    def update_entry(self, page_id, name=None, start_date=None, end_date=None, duration=None, gcal_id=None, todoist_id=None, category=None, done=None, labels=None, priority=None):
         data = {
             "page_id": page_id,
             "properties": {
@@ -233,6 +264,20 @@ class NotionAPI():
         if category:
             data['properties'][self.properties['Category']] = {}
             data['properties'][self.properties['Category']]['select'] = {'name': category}
+
+        if labels:
+            options = [{'name': label} for label in labels]
+            data['properties'][self.properties['Labels']] = {}
+            # data['properties'][self.properties['Labels']]['type'] = 'multi_select'
+            data['properties'][self.properties['Labels']]['multi_select'] = options
+
+        if done is not None:
+            data['properties'][self.properties['Done']] = {}
+            data['properties'][self.properties['Done']]['checkbox'] = done
+
+        if priority:
+            data['properties'][self.properties['Priority']] = {}
+            data['properties'][self.properties['Priority']]['select'] = {'name': priority}
 
         response = self.client.pages.update(**data)
         return response

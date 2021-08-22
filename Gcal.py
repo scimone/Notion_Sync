@@ -30,7 +30,7 @@ class GCalAPI():
 
         if not (credentials and credentials.valid):
             if credentials:
-                credentials.refresh(Request())  # refresh credentials
+                credentials = self._setup_credentials() # refresh credentials
             else:
                 credentials = self._setup_credentials()
             self._save_credentials(credentials)
