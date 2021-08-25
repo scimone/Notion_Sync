@@ -1,5 +1,6 @@
 from todoist.api import TodoistAPI
 from datetime import datetime, timedelta
+import pytz
 from config import todoist_token
 
 
@@ -48,20 +49,46 @@ class TodoIstAPI():
     #     return entries
 
     def parse_date(self, date):
-        if len(date) > 10:
+        if len(date) > 20:
             date = datetime.strptime(date, '%Y-%m-%dT%H:%M:%S%z')  # TODO: convert to timezone
+        elif len(date) == 19:
+            date = datetime.strptime(date, '%Y-%m-%dT%H:%M:%S')  # TODO: convert to timezone
+        elif len(date) == 20:
+            date = datetime.strptime(date, '%Y-%m-%dT%H:%M:%SZ')  # TODO: convert to timezone
         else:
             default_event_start = 8  # TODO: config var
             date = datetime.strptime(date, '%Y-%m-%d') + timedelta(hours=default_event_start)
         return date
 
-    def get_labels(self, label_ids):
-        label_dict = dict((label['id'], label['name']) for label in self.api.state['labels'])
-        return [label_dict[label_id] for label_id in label_ids]
+    def format_date(self, date, timezone=None):
+        if type(date) is not datetime:
+            date = datetime(date.year, date.month, date.day)
+        if (date.tzinfo is None or date.tzinfo.utcoffset(date) is None) and timezone:
+            tz = pytz.timezone(timezone)
+            date = tz.localize(date)
+        return date.strftime("%Y-%m-%dT%H:%M:%S")
 
-    def get_priority(self, priority):
-        priority_dict = dict(zip(list(range(1, 5)), list(range(4, 0, -1))))
-        return str(priority_dict[priority])
+    def get_labels(self, labels, todoist_format=False):
+        if labels:
+            if todoist_format:
+                label_dict = dict((label['name'], label['id']) for label in self.api.state['labels'])
+                labels = [label_dict[label] for label in labels]
+            else:
+                label_dict = dict((label['id'], label['name']) for label in self.api.state['labels'])
+                labels = [label_dict[label] for label in labels]
+        else:
+            labels = None
+        return labels
+
+    def get_priority(self, priority, todoist_format=False):
+        if priority:
+            if todoist_format:
+                priority_dict = dict(zip([str(i) for i in range(1,5)], list(range(4, 0, -1))))
+            else:
+                priority_dict = dict(zip(list(range(4, 0, -1)), [str(i) for i in range(1, 5)]))
+            return priority_dict[priority]
+        else:
+            return None
 
     def get_duration(self, priority):
         duration_dict = {
@@ -80,15 +107,76 @@ class TodoIstAPI():
             properties['id'] = str(task['id'])
         if done:
             properties['done'] = bool(task['checked'])
-        if labels:
-            properties['labels'] = self.get_labels(task['labels'])
-        if priority:
-            properties['priority'] = self.get_priority(task['priority'])
+
+        try:
+            if labels and ('labels' in task.data.keys()):
+                properties['labels'] = self.get_labels(task['labels'])
+            else:
+                properties['labels'] = None
+            if priority and ('priority' in task.data.keys()):
+                properties['priority'] = self.get_priority(task['priority'])
+            else:
+                properties['priority'] = None
+        except:
+            if labels and ('labels' in task.keys()):
+                properties['labels'] = self.get_labels(task['labels'])
+            else:
+                properties['labels'] = None
+            if priority and ('priority' in task.keys()):
+                properties['priority'] = self.get_priority(task['priority'])
+            else:
+                properties['priority'] = None
+
         if date:
             properties['start_date'] = self.parse_date(task['due']['date'])
-            properties['duration'] = self.get_duration(properties['priority'])
+            if properties['priority']:
+                properties['duration'] = self.get_duration(properties['priority'])
+            else:
+                properties['duration'] = 1  #TODO: default length
             properties['end_date'] = properties['start_date'] + timedelta(hours=properties['duration'])
         return properties
+
+    def check_or_uncheck_item(self, id, done):
+        item = self.api.items.get_by_id(id)
+        if done:
+            item.complete()
+        else:
+            item.uncomplete()
+
+    def add_entry(self, name, start_date=None, priority=None, parent_id=None, labels=None):
+        data = {
+            "content": name
+        }
+        if start_date:
+            data["due"] = {}
+            data["due"]["date"] = self.format_date(start_date)
+        if priority and priority != []:
+            data["priority"] = priority
+        if parent_id:
+            data["parent_id"] = parent_id
+        if labels and labels != []:
+            data["labels"] = labels
+
+        item = self.api.items.add(**data)
+        todoist_id = item["id"]
+
+        return todoist_id
+
+    def update_entry(self, todoist_id, name=None, start_date=None, priority=None, parent_id=None, labels=None):
+        data = {}
+        if name:
+            data["content"] = name
+        if start_date:
+            data["due"] = {}
+            data["due"]["date"] = self.format_date(start_date)
+        if priority and priority != []:
+            data["priority"] = priority
+        if parent_id:
+            data["parent_id"] = parent_id
+        if labels and labels != []:
+            data["labels"] = labels
+        item = self.api.items.get_by_id(todoist_id)
+        item.update(**data)
 
     def get_uncompleted_tasks(self):
         pass

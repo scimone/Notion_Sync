@@ -65,7 +65,10 @@ class NotionAPI():
             'todoist_ids': [],
             'last_updated': [],
             'needs_update': [],
-            'notion_ids': []
+            'notion_ids': [],
+            'done': [],
+            'priorities': [],
+            'labels': []
         }
 
         for item in events:
@@ -107,6 +110,7 @@ class NotionAPI():
                 entries['needs_update'].append(False)
 
             entries['names'].append(item['properties'][self.properties['Name']]['title'][0]['text']['content'])
+
             if self.properties['Date'] in item_properties:
                 entries['start_dates'].append(self.parse_date(item['properties'][self.properties['Date']]['date']['start']))
                 entries['end_dates'].append(self.parse_date(item['properties'][self.properties['Date']]['date']['end']))
@@ -114,6 +118,21 @@ class NotionAPI():
                 entries['start_dates'].append(None)
                 entries['end_dates'].append(None)
             entries['notion_ids'].append(item['id'])
+
+            if self.properties['Priority'] in item_properties:
+                entries['priorities'].append(item['properties'][self.properties['Priority']]['select']['name'])
+            else:
+                entries['priorities'].append(None)
+
+            if self.properties['Done'] in item_properties:
+                entries['done'].append(item['properties'][self.properties['Done']]['checkbox'])
+            else:
+                entries['done'].append(None)
+
+            if self.properties['Labels'] in item_properties:
+                entries['labels'].append(item['properties'][self.properties['Labels']]['multi_select'])
+            else:
+                entries['labels'].append(None)
 
         return entries
 
@@ -268,7 +287,6 @@ class NotionAPI():
         if labels:
             options = [{'name': label} for label in labels]
             data['properties'][self.properties['Labels']] = {}
-            # data['properties'][self.properties['Labels']]['type'] = 'multi_select'
             data['properties'][self.properties['Labels']]['multi_select'] = options
 
         if done is not None:
