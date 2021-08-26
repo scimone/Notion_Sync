@@ -57,6 +57,7 @@ class GCalAPI():
             response = self.service.events().list(
                 calendarId=self.calendar_ids[calendar],
                 singleEvents=True,
+                showDeleted=True,
                 orderBy='updated',
                 timeMin=self.format_date(time_min),
                 timeMax=self.format_date(time_max)
@@ -74,6 +75,7 @@ class GCalAPI():
             'durations': [],
             'gcal_ids': [],
             'last_updated': [],
+            'deleted': []
         }
 
         for item in results:
@@ -94,6 +96,10 @@ class GCalAPI():
             entries['calendars'].append(self.calendars[item['organizer']['email']])
             entries['gcal_ids'].append(item['id'])
             entries['last_updated'].append(self.datetime_floor(self.parse_date(item['updated'])))
+            if item['status'] == 'cancelled':
+                entries['deleted'].append(True)
+            else:
+                entries['deleted'].append(False)
         return entries
 
     def format_date(self, date):

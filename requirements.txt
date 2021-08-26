@@ -7,4 +7,4 @@ APScheduler==3.0.0
 PyYAML
 google-api-python-client==2.6.0
 google-auth-oauthlib==0.4.4
-notion-client==0.4.0
+notion-client==0.6.0

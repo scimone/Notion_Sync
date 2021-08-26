@@ -15,14 +15,15 @@ def bring_new_gcal_events_to_notion(notion, gcal_entries, notion_entries):
 
     # bring new events from gcal to notion
     for idx in idx_new_gcal_events:
-        name = gcal_entries['names'][idx]
-        start_date = gcal_entries['start_dates'][idx]
-        end_date = gcal_entries['end_dates'][idx]
-        duration = gcal_entries['durations'][idx]
-        gcal_id = gcal_entries['gcal_ids'][idx]
-        calendar = gcal_entries['calendars'][idx]
-        notion.add_entry(name=name, start_date=start_date, end_date=end_date, duration=duration, gcal_id=gcal_id, category=calendar)
-        print("Added '{}' to Notion.".format(name))
+        if not gcal_entries['deleted'][idx]:
+            name = gcal_entries['names'][idx]
+            start_date = gcal_entries['start_dates'][idx]
+            end_date = gcal_entries['end_dates'][idx]
+            duration = gcal_entries['durations'][idx]
+            gcal_id = gcal_entries['gcal_ids'][idx]
+            calendar = gcal_entries['calendars'][idx]
+            notion.add_entry(name=name, start_date=start_date, end_date=end_date, duration=duration, gcal_id=gcal_id, category=calendar)
+            print("Added '{}' to Notion.".format(name))
 
 
 def update_gcal_events_in_notion(notion, gcal_entries, notion_entries):
@@ -40,17 +41,21 @@ def update_gcal_events_in_notion(notion, gcal_entries, notion_entries):
             idx_notion_events_to_modify.append(notion_idx)
 
     for gcal_idx, notion_idx in zip(idx_modified_gcal_events, idx_notion_events_to_modify):
-        notion.update_entry(
-            name=gcal_entries['names'][gcal_idx],
-            start_date=gcal_entries['start_dates'][gcal_idx],
-            end_date=gcal_entries['end_dates'][gcal_idx],
-            duration=gcal_entries['durations'][gcal_idx],
-            gcal_id=gcal_entries['gcal_ids'][gcal_idx],
-            category=gcal_entries['calendars'][gcal_idx],
-            page_id=notion_entries['notion_ids'][notion_idx]
-        )
-        notion_entries = notion.update_local_data(notion_entries, notion_idx, gcal_entries['start_dates'][gcal_idx], gcal_entries['end_dates'][gcal_idx], gcal_entries['durations'][gcal_idx])
-        print("Updated '{}' in Notion.".format(gcal_entries['names'][gcal_idx]))
+        if not gcal_entries['deleted'][gcal_idx]:
+            notion.update_entry(
+                name=gcal_entries['names'][gcal_idx],
+                start_date=gcal_entries['start_dates'][gcal_idx],
+                end_date=gcal_entries['end_dates'][gcal_idx],
+                duration=gcal_entries['durations'][gcal_idx],
+                gcal_id=gcal_entries['gcal_ids'][gcal_idx],
+                category=gcal_entries['calendars'][gcal_idx],
+                page_id=notion_entries['notion_ids'][notion_idx]
+            )
+            notion_entries = notion.update_local_data(notion_entries, notion_idx, gcal_entries['start_dates'][gcal_idx], gcal_entries['end_dates'][gcal_idx], gcal_entries['durations'][gcal_idx])
+            print("Updated '{}' in Notion.".format(gcal_entries['names'][gcal_idx]))
+        else:
+            notion.update_entry(page_id=notion_entries['notion_ids'][notion_idx], delete=True)
+            print("Deleted '{}' in Notion.".format(gcal_entries['names'][gcal_idx]))
     return notion_entries, idx_notion_events_to_modify
 
 
