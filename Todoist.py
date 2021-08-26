@@ -1,7 +1,7 @@
 from todoist.api import TodoistAPI
 from datetime import datetime, timedelta
 import pytz
-from config import todoist_token
+from config import DEFAULT_EVENT_START, DEFAULT_EVENT_LENGTH
 
 
 class TodoIstAPI():
@@ -18,46 +18,17 @@ class TodoIstAPI():
             self.first_run = False
         else:
             tasks = updates['items']  # only get updated tasks
-        # entries = self._convert_entries(tasks)
         return tasks
-
-    # def _get_all_tasks(self):
-    #     tasks = self.api.state['items']
-    #     return tasks
-    #
-    # def _get_updated_tasks(self, updates):
-    #     tasks = updates['items']
-    #     return tasks
-
-    # def _convert_entries(self, items):
-    #     labels = self.get_labels()
-    #     entries = {
-    #         'names': [],
-    #         'start_dates': [],
-    #         'priorities': [],
-    #         'labels': [],
-    #         'needs_update': [],
-    #         'todoist_ids': [],
-    #         'notion_ids': []
-    #     }
-    #
-    #     for item in items:
-    #         if item['checked'] == 1 and item['is_deleted'] == 0:
-    #             entries['names'].append(item['content'])
-    #             entries['ids'].append(item['ids'])
-    #
-    #     return entries
 
     def parse_date(self, date):
         if len(date) > 20:
-            date = datetime.strptime(date, '%Y-%m-%dT%H:%M:%S%z')  # TODO: convert to timezone
+            date = datetime.strptime(date, '%Y-%m-%dT%H:%M:%S%z')
         elif len(date) == 19:
-            date = datetime.strptime(date, '%Y-%m-%dT%H:%M:%S')  # TODO: convert to timezone
+            date = datetime.strptime(date, '%Y-%m-%dT%H:%M:%S')
         elif len(date) == 20:
-            date = datetime.strptime(date, '%Y-%m-%dT%H:%M:%SZ')  # TODO: convert to timezone
+            date = datetime.strptime(date, '%Y-%m-%dT%H:%M:%SZ')
         else:
-            default_event_start = 8  # TODO: config var
-            date = datetime.strptime(date, '%Y-%m-%d') + timedelta(hours=default_event_start)
+            date = datetime.strptime(date, '%Y-%m-%d') + timedelta(hours=DEFAULT_EVENT_START)
         return date
 
     def format_date(self, date, timezone=None):
@@ -95,49 +66,39 @@ class TodoIstAPI():
             '1': 3,
             '2': 0.75,
             '3': 0.25,
-            '4': 1  # TODO: set to default length
+            '4': DEFAULT_EVENT_LENGTH
         }
         return duration_dict[priority]
 
-    def get_task_properties(self, task, name=False, task_id=False, done=False, labels=False, priority=False, date=False):
-        properties = {}
-        if name:
-            properties['name'] = task['content']
-        if task_id:
-            properties['id'] = str(task['id'])
-        if done:
-            properties['done'] = bool(task['checked'])
+    def get_task_properties(self, task, duration=None):
+        properties = {'name': task['content'], 'id': str(task['id']), 'done': bool(task['checked'])}
 
-        try:
-            if labels and ('labels' in task.data.keys()):
-                properties['labels'] = self.get_labels(task['labels'])
-            else:
-                properties['labels'] = None
-            if priority and ('priority' in task.data.keys()):
-                properties['priority'] = self.get_priority(task['priority'])
-            else:
-                properties['priority'] = None
-        except:
-            if labels and ('labels' in task.keys()):
-                properties['labels'] = self.get_labels(task['labels'])
-            else:
-                properties['labels'] = None
-            if priority and ('priority' in task.keys()):
-                properties['priority'] = self.get_priority(task['priority'])
-            else:
-                properties['priority'] = None
+        if 'labels' in task.data.keys():
+            properties['labels'] = self.get_labels(task['labels'])
+        else:
+            properties['labels'] = None
+        if 'priority' in task.data.keys():
+            properties['priority'] = self.get_priority(task['priority'])
+        else:
+            properties['priority'] = None
 
-        if date:
+        if task['due']:
             properties['start_date'] = self.parse_date(task['due']['date'])
-            if properties['priority']:
-                properties['duration'] = self.get_duration(properties['priority'])
-            else:
-                properties['duration'] = 1  #TODO: default length
-            properties['end_date'] = properties['start_date'] + timedelta(hours=properties['duration'])
+            if not duration:
+                if properties['priority']:
+                    duration = self.get_duration(properties['priority'])
+                else:
+                    duration = DEFAULT_EVENT_LENGTH
+            properties['end_date'] = properties['start_date'] + timedelta(hours=duration)
+            properties['duration'] = duration
+        else:
+            properties['start_date'] = None
+            properties['end_date'] = None
+            properties['duration'] = None
         return properties
 
-    def check_or_uncheck_item(self, id, done):
-        item = self.api.items.get_by_id(id)
+    def check_or_uncheck_item(self, todoist_id, done):
+        item = self.api.items.get_by_id(todoist_id)
         if done:
             item.complete()
         else:
@@ -177,12 +138,3 @@ class TodoIstAPI():
             data["labels"] = labels
         item = self.api.items.get_by_id(todoist_id)
         item.update(**data)
-
-    def get_uncompleted_tasks(self):
-        pass
-
-    def check_item(self):
-        pass
-
-    def update_item(self):
-        pass

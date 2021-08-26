@@ -2,6 +2,7 @@ import os
 from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
+from config import DEFAULT_EVENT_START, DEFAULT_EVENT_LENGTH
 from datetime import datetime, timedelta
 import pickle
 import pytz
@@ -11,8 +12,8 @@ class GCalAPI():
     def __init__(self, timezone, gcal_config):
         self.timezone = timezone
         self.default_calendar = gcal_config['Default Calendar']
-        self.default_event_start = gcal_config['Default Event Start']
-        self.default_event_length = gcal_config['Default Event Length']
+        self.default_event_start = DEFAULT_EVENT_START
+        self.default_event_length = DEFAULT_EVENT_LENGTH
         self.calendar_ids = gcal_config['Calendars']
         self.calendars = {v: k for k, v in self.calendar_ids.items()}  # reverse dictionary
         self.service = self.setup_service()
@@ -106,7 +107,7 @@ class GCalAPI():
     def parse_date(self, date):
         if type(date) is dict:
             if 'dateTime' in date:
-                date = datetime.strptime(date['dateTime'], '%Y-%m-%dT%H:%M:%S%z')  # TODO: other formats?
+                date = datetime.strptime(date['dateTime'], '%Y-%m-%dT%H:%M:%S%z')
             elif 'date' in date:
                 date = datetime.strptime(date['date'], '%Y-%m-%d')
         else:
