@@ -104,6 +104,11 @@ class TodoIstAPI():
         else:
             item.uncomplete()
 
+    def delete_item(self, todoist_id, delete):
+        item = self.api.items.get_by_id(todoist_id)
+        if delete:
+            item.delete()
+
     def add_entry(self, name, start_date=None, priority=None, parent_id=None, labels=None):
         data = {
             "content": name

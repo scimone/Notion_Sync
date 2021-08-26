@@ -68,7 +68,8 @@ class NotionAPI():
             'notion_ids': [],
             'done': [],
             'priorities': [],
-            'labels': []
+            'labels': [],
+            'deleted': []
         }
 
         for item in events:
@@ -134,13 +135,11 @@ class NotionAPI():
             else:
                 entries['labels'].append(None)
 
-        return entries
+            entries['deleted'].append(False)
 
-    # def format_date(self, date):
-    #     if type(date) is datetime and (date.tzinfo is None or date.tzinfo.utcoffset(date) is None):
-    #         tz = pytz.timezone(self.timezone)
-    #         date = tz.localize(date)
-    #     return date.strftime("%Y-%m-%dT%H:%M:%S%z")
+            # print(item['properties'][self.properties['Name']]['title'][0]['text']['content'], item['archived'])
+
+        return entries
 
     def format_date(self, date, timezone=None):
         if type(date) is not datetime:
@@ -301,10 +300,11 @@ class NotionAPI():
         response = self.client.pages.update(**data)
         return response
 
-    def update_local_data(self, notion_entries, idx, start_date, end_date, duration):
+    def update_local_data(self, notion_entries, idx, start_date, end_date, duration, delete=False):
         notion_entries['start_dates'][idx] = start_date
         notion_entries['durations'][idx] = duration
         notion_entries['end_dates'][idx] = end_date
+        notion_entries['deleted'][idx] = delete
         return notion_entries
 
 
