@@ -69,12 +69,27 @@ class NotionAPI():
             'done': [],
             'priorities': [],
             'labels': [],
-            'deleted': []
+            'deleted': [],
+            'parent_tasks': [],
+            'sub_tasks': []
         }
 
         for item in events:
             # need to test if the properties are specified for the item, otherwise error
             item_properties = item['properties'].keys()
+
+            if item['properties'][self.properties['Sub Tasks']]['relation']:
+                sub_tasks = []
+                for sub_task in item['properties'][self.properties['Sub Tasks']]['relation']:
+                    sub_tasks.append(sub_task['id'])
+                entries['sub_tasks'].append(sub_tasks)
+            else:
+                entries['sub_tasks'].append(None)
+
+            if item['properties'][self.properties['Parent Task']]['relation']:
+                entries['parent_tasks'].append(item['properties'][self.properties['Parent Task']]['relation'][0]['id'])
+            else:
+                entries['parent_tasks'].append(None)
 
             if self.properties['Category'] in item_properties:
                 entries['categories'].append(item['properties'][self.properties['Category']]['select']['name'])
@@ -87,7 +102,7 @@ class NotionAPI():
                 entries['gcal_ids'].append(None)
 
             if item['properties'][self.properties['Todoist ID']]['rich_text']:  # if not empty
-                entries['todoist_ids'].append(item['properties'][self.properties['Todoist ID']]['rich_text'][0]['text']['content'])
+                entries['todoist_ids'].append(int(item['properties'][self.properties['Todoist ID']]['rich_text'][0]['text']['content']))
             else:
                 entries['todoist_ids'].append(None)
 
@@ -159,7 +174,7 @@ class NotionAPI():
         else:
             return None
 
-    def add_entry(self, name, start_date=None, end_date=None, duration=None, gcal_id=None, todoist_id=None, category=None, done=None, labels=None, priority=None):
+    def add_entry(self, name, start_date=None, end_date=None, duration=None, gcal_id=None, todoist_id=None, category=None, done=None, labels=None, priority=None, parent_id=None):
         data = {
             "parent": {
                 "database_id": self.database_id,
@@ -225,10 +240,14 @@ class NotionAPI():
             data['properties'][self.properties['Priority']] = {}
             data['properties'][self.properties['Priority']]['select'] = {'name': priority}
 
+        if parent_id:
+            data['properties'][self.properties['Parent Task']] = {}
+            data['properties'][self.properties['Parent Task']]['relation'] = [{'id': parent_id}]
+
         response = self.client.pages.create(**data)
         return response
 
-    def update_entry(self, page_id, deleted=False, name=None, start_date=None, end_date=None, duration=None, gcal_id=None, todoist_id=None, category=None, done=None, labels=None, priority=None):
+    def update_entry(self, page_id, deleted=False, name=None, start_date=None, end_date=None, duration=None, gcal_id=None, todoist_id=None, category=None, done=None, labels=None, priority=None, parent_id=None):
         data = {
             "page_id": page_id,
             "properties": {
@@ -299,6 +318,10 @@ class NotionAPI():
             data['properties'][self.properties['Priority']] = {}
             data['properties'][self.properties['Priority']]['select'] = {'name': priority}
 
+        if parent_id:
+            data['properties'][self.properties['Parent Task']] = {}
+            data['properties'][self.properties['Parent Task']]['relation'] = [{'id': parent_id}]
+
         response = self.client.pages.update(**data)
         return response
 
@@ -312,4 +335,18 @@ class NotionAPI():
         notion_entries['deleted'][idx] = delete
         return notion_entries
 
+    def find_matching_idx(self, notion_entries, property, entry):
+        if entry:
+            idx = notion_entries[property].index(entry)
+        else:
+            idx = None
+        return idx
+
+    def find_parent_id(self, notion_entries, property1, property2, entry):
+        parent_idx = self.find_matching_idx(notion_entries, property1, entry)
+        if parent_idx:
+            parent_id = notion_entries[property2][parent_idx]
+        else:
+            parent_id = None
+        return parent_id
 

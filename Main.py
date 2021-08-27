@@ -123,7 +123,8 @@ def update_events_in_gcal(notion, gcal, notion_entries, by_todoist_modified_noti
 
 
 def update_todoist_entries_in_notion(notion, todoist, task, notion_entries):
-    notion_idx = notion_entries['todoist_ids'].index(str(task['id']))  # find index of the matching id to get the notion page id
+    # notion_idx = notion_entries['todoist_ids'].index(str(task['id']))  # find index of the matching id to get the notion page id
+    notion_idx = notion.find_matching_idx(notion_entries, 'todoist_ids', task['id'])
     page_id = notion_entries['notion_ids'][notion_idx]
 
     if not task["is_deleted"]:
@@ -135,7 +136,8 @@ def update_todoist_entries_in_notion(notion, todoist, task, notion_entries):
                             todoist_id=prop['id'],
                             done=prop['done'],
                             labels=prop['labels'],
-                            priority=prop['priority']
+                            priority=prop['priority'],
+                            parent_id=notion.find_parent_id(notion_entries, 'todoist_ids', 'notion_ids', prop['parent_id'])
                             )
         notion_entries = notion.update_local_data(notion_entries, notion_idx, prop['start_date'], prop['end_date'], notion_entries['durations'][notion_idx])
     else:
@@ -146,10 +148,15 @@ def update_todoist_entries_in_notion(notion, todoist, task, notion_entries):
     return notion_idx, notion_entries
 
 
-def bring_new_todoist_entries_to_notion(todoist, notion, task, time_min, time_max):
+def bring_new_todoist_entries_to_notion(notion_entries, todoist, notion, task, time_min, time_max):
     prop = todoist.get_task_properties(task)
 
-    if time_min + timedelta(days=1) <= prop['start_date'].date() < time_max:
+    date_in_range = False
+    if prop['start_date']:
+        if time_min + timedelta(days=1) <= prop['start_date'].date() < time_max:
+            date_in_range = True
+
+    if (not prop['start_date']) or date_in_range:
         notion.add_entry(name=prop['name'],
                          start_date=prop['start_date'],
                          end_date=prop['end_date'],
@@ -158,25 +165,28 @@ def bring_new_todoist_entries_to_notion(todoist, notion, task, time_min, time_ma
                          category=gcal_config["Default Calendar"],
                          done=prop['done'],
                          labels=prop['labels'],
-                         priority=prop['priority'])
+                         priority=prop['priority'],
+                         parent_id=notion.find_parent_id(notion_entries, 'todoist_ids', 'notion_ids', prop['parent_id']))
         print("Added '{}' to Notion.".format(task['content']))
 
 
-def bring_new_notion_entries_to_todoist(todoist, notion_entries):
+def bring_new_notion_entries_to_todoist(notion, todoist, notion_entries):
     # bring all new notion tasks to todoist
     idx_new_notion_events = np.where(np.array(notion_entries['todoist_ids']) == None)[0]
-    idx_tasks = list(np.where(np.array(notion_entries['categories']) == gcal_config["Default Calendar"])[0])
+    idx_tasks = list(np.where(np.array(notion_entries['categories']) == gcal_config["Default Calendar"])[0])  # TODO: or category == None
     idx_notion = list(set(idx_new_notion_events).intersection(idx_tasks))
 
     for idx in idx_notion:
         start_date = notion_entries['start_dates'][idx]
-        if (start_date.hour == 0) and (start_date.minute == 0):  # no time specified
-            start_date += timedelta(hours=DEFAULT_EVENT_START)
+        if start_date:
+            if (start_date.hour == 0) and (start_date.minute == 0):  # no time specified
+                start_date += timedelta(hours=DEFAULT_EVENT_START)
+        parent_idx = notion.find_matching_idx(notion_entries, "notion_ids", notion_entries['parent_tasks'][idx])
         todoist.add_entry(
             name=notion_entries['names'][idx],
             start_date=start_date,
             priority=todoist.get_priority(notion_entries['priorities'][idx], todoist_format=True),
-            parent_id=None,
+            parent_id=int(notion_entries['todoist_ids'][parent_idx]),
             labels=todoist.get_labels([label['name'] for label in notion_entries['labels'][idx]], todoist_format=True)
         )
         print("Added '{}' to Todoist.".format(notion_entries['names'][idx]))
@@ -199,15 +209,15 @@ def update_notion_entries_in_todoist(notion, todoist, notion_entries, idx_notion
         page_id = notion_entries['notion_ids'][idx]
         todoist_id = notion_entries['todoist_ids'][idx]
         todoist.update_entry(
-            int(todoist_id),
+            todoist_id,
             name=notion_entries['names'][idx],
             start_date=notion_entries['start_dates'][idx],
             priority=todoist.get_priority(notion_entries['priorities'][idx], todoist_format=True),
             parent_id=None,
             labels=todoist.get_labels([label['name'] for label in notion_entries['labels'][idx]], todoist_format=True)
         )
-        todoist.check_or_uncheck_item(int(todoist_id), notion_entries['done'][idx])
-        todoist.delete_item(int(todoist_id), notion_entries['deleted'][idx])
+        todoist.check_or_uncheck_item(todoist_id, notion_entries['done'][idx])
+        todoist.delete_item(todoist_id, notion_entries['deleted'][idx])
         if not notion_entries['deleted'][idx]:
             notion.update_entry(page_id=page_id)
         print("Updated '{}' in Todoist.".format(notion_entries['names'][idx]))
@@ -242,15 +252,15 @@ def run_sync(notion, todoist, gcal):
         by_todoist_modified_notion_events = []
         for task in todoist_entries:
             if not type(task['id']) == str:
-                if str(task['id']) in notion_entries['todoist_ids']:
+                if task['id'] in notion_entries['todoist_ids']:
                     notion_idx, notion_entries = update_todoist_entries_in_notion(notion, todoist, task, notion_entries)
                     if notion_entries['start_dates'][notion_idx]:
                         by_todoist_modified_notion_events.append(notion_idx)
                 else:
                     if not bool(task['is_deleted']):
-                        bring_new_todoist_entries_to_notion(todoist, notion, task, time_min, time_max)
+                        bring_new_todoist_entries_to_notion(notion_entries, todoist, notion, task, time_min, time_max)
 
-        idx_notion = bring_new_notion_entries_to_todoist(todoist, notion_entries)
+        idx_notion = bring_new_notion_entries_to_todoist(notion, todoist, notion_entries)
         update_notion_entries_in_todoist(notion, todoist, notion_entries)
 
         print('{} todoist sync finished'.format(datetime.now()))

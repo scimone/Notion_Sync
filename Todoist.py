@@ -81,10 +81,16 @@ class TodoIstAPI():
             properties['labels'] = self.get_labels(task['labels'])
         else:
             properties['labels'] = None
+
         if 'priority' in task_data.keys():
             properties['priority'] = self.get_priority(task['priority'])
         else:
             properties['priority'] = None
+
+        if 'parent_id' in task_data.keys():
+            properties['parent_id'] = task['parent_id']
+        else:
+            properties['parent_id'] = None
 
         if bool(task['is_deleted']):
             properties['deleted'] = True
