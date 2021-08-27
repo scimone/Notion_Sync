@@ -170,3 +170,7 @@ class GCalAPI():
             }
         response = self.service.events().update(calendarId=self.calendar_ids[calendar], eventId=gcal_id, body=data).execute()
         return response
+
+    def delete_entry(self, calendar, gcal_id, delete=False):
+        if delete:
+            response = self.service.events().delete(calendarId=self.calendar_ids[calendar], eventId=gcal_id).execute()

@@ -302,10 +302,13 @@ class NotionAPI():
         response = self.client.pages.update(**data)
         return response
 
-    def update_local_data(self, notion_entries, idx, start_date, end_date, duration, delete=False):
-        notion_entries['start_dates'][idx] = start_date
-        notion_entries['durations'][idx] = duration
-        notion_entries['end_dates'][idx] = end_date
+    def update_local_data(self, notion_entries, idx, start_date=None, end_date=None, duration=None, delete=False):
+        if start_date:
+            notion_entries['start_dates'][idx] = start_date
+        if duration:
+            notion_entries['durations'][idx] = duration
+        if end_date:
+            notion_entries['end_dates'][idx] = end_date
         notion_entries['deleted'][idx] = delete
         return notion_entries
 

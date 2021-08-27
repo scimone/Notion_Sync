@@ -116,7 +116,9 @@ def update_events_in_gcal(notion, gcal, notion_entries, by_todoist_modified_noti
                 duration = DEFAULT_EVENT_LENGTH
             end_date = start_date + timedelta(hours=duration)
         gcal.update_entry(calendar=calendar, gcal_id=gcal_id, name=name, start_date=start_date, end_date=end_date, description=None, source=None)
-        notion.update_entry(page_id=page_id)
+        gcal.delete_entry(calendar=calendar, gcal_id=gcal_id, delete=notion_entries['deleted'][idx])
+        if not notion_entries['deleted'][idx]:
+            notion.update_entry(page_id=page_id)
         print("Updated '{}' in GCal.".format(name))
 
 
@@ -124,20 +126,23 @@ def update_todoist_entries_in_notion(notion, todoist, task, notion_entries):
     notion_idx = notion_entries['todoist_ids'].index(str(task['id']))  # find index of the matching id to get the notion page id
     page_id = notion_entries['notion_ids'][notion_idx]
 
-    prop = todoist.get_task_properties(task, duration=notion_entries['durations'][notion_idx])
-    notion.update_entry(page_id=page_id,
-                        name=prop['name'],
-                        start_date=prop['start_date'],
-                        end_date=prop['end_date'],
-                        todoist_id=prop['id'],
-                        done=prop['done'],
-                        labels=prop['labels'],
-                        priority=prop['priority'],
-                        deleted=prop['deleted'])
+    if not task["is_deleted"]:
+        prop = todoist.get_task_properties(task, duration=notion_entries['durations'][notion_idx])
+        notion.update_entry(page_id=page_id,
+                            name=prop['name'],
+                            start_date=prop['start_date'],
+                            end_date=prop['end_date'],
+                            todoist_id=prop['id'],
+                            done=prop['done'],
+                            labels=prop['labels'],
+                            priority=prop['priority']
+                            )
+        notion_entries = notion.update_local_data(notion_entries, notion_idx, prop['start_date'], prop['end_date'], notion_entries['durations'][notion_idx])
+    else:
+        notion.update_entry(page_id=page_id, deleted=True)
+        notion_entries = notion.update_local_data(notion_entries, notion_idx, delete=True)
 
-    notion_entries = notion.update_local_data(notion_entries, notion_idx, prop['start_date'], prop['end_date'], notion_entries['durations'][notion_idx], delete=prop['deleted'])
-
-    print("Updated '{}' in Notion.".format(task['content']))
+    print("Updated '{}' in Notion.".format(notion_entries['names'][notion_idx]))
     return notion_idx, notion_entries
 
 
@@ -239,7 +244,7 @@ def run_sync(notion, todoist, gcal):
             if not type(task['id']) == str:
                 if str(task['id']) in notion_entries['todoist_ids']:
                     notion_idx, notion_entries = update_todoist_entries_in_notion(notion, todoist, task, notion_entries)
-                    if task['due']:
+                    if notion_entries['start_dates'][notion_idx]:
                         by_todoist_modified_notion_events.append(notion_idx)
                 else:
                     if not bool(task['is_deleted']):
