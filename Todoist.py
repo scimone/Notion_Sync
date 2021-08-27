@@ -72,15 +72,24 @@ class TodoIstAPI():
 
     def get_task_properties(self, task, duration=None):
         properties = {'name': task['content'], 'id': str(task['id']), 'done': bool(task['checked'])}
+        if type(task) is dict:
+            task_data = task
+        else:
+            task_data = task.data
 
-        if 'labels' in task.data.keys():
+        if 'labels' in task_data.keys():
             properties['labels'] = self.get_labels(task['labels'])
         else:
             properties['labels'] = None
-        if 'priority' in task.data.keys():
+        if 'priority' in task_data.keys():
             properties['priority'] = self.get_priority(task['priority'])
         else:
             properties['priority'] = None
+
+        if bool(task['is_deleted']):
+            properties['deleted'] = True
+        else:
+            properties['deleted'] = False
 
         if task['due']:
             properties['start_date'] = self.parse_date(task['due']['date'])

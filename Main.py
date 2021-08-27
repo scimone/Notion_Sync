@@ -132,9 +132,10 @@ def update_todoist_entries_in_notion(notion, todoist, task, notion_entries):
                         todoist_id=prop['id'],
                         done=prop['done'],
                         labels=prop['labels'],
-                        priority=prop['priority'])
+                        priority=prop['priority'],
+                        deleted=prop['deleted'])
 
-    notion_entries = notion.update_local_data(notion_entries, notion_idx, prop['start_date'], prop['end_date'], notion_entries['durations'][notion_idx])
+    notion_entries = notion.update_local_data(notion_entries, notion_idx, prop['start_date'], prop['end_date'], notion_entries['durations'][notion_idx], delete=prop['deleted'])
 
     print("Updated '{}' in Notion.".format(task['content']))
     return notion_idx, notion_entries
