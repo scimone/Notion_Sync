@@ -52,7 +52,7 @@ def update_gcal_events_in_notion(notion, gcal_entries, notion_entries):
                 page_id=notion_entries['notion_ids'][notion_idx]
             )
         else:
-            notion.update_entry(page_id=notion_entries['notion_ids'][notion_idx], delete=True)
+            notion.update_entry(page_id=notion_entries['notion_ids'][notion_idx], deleted=True)
         print("Updated '{}' in Notion.".format(gcal_entries['names'][gcal_idx]))
         notion_entries = notion.update_local_data(notion_entries, notion_idx, gcal_entries['start_dates'][gcal_idx], gcal_entries['end_dates'][gcal_idx], gcal_entries['durations'][gcal_idx], delete=gcal_entries['deleted'][gcal_idx])
     return notion_entries, idx_notion_events_to_modify
@@ -202,7 +202,8 @@ def update_notion_entries_in_todoist(notion, todoist, notion_entries, idx_notion
         )
         todoist.check_or_uncheck_item(int(todoist_id), notion_entries['done'][idx])
         todoist.delete_item(int(todoist_id), notion_entries['deleted'][idx])
-        notion.update_entry(page_id=page_id)
+        if not notion_entries['deleted'][idx]:
+            notion.update_entry(page_id=page_id)
         print("Updated '{}' in Todoist.".format(notion_entries['names'][idx]))
 
 

@@ -228,10 +228,9 @@ class NotionAPI():
         response = self.client.pages.create(**data)
         return response
 
-    def update_entry(self, page_id, delete=False, name=None, start_date=None, end_date=None, duration=None, gcal_id=None, todoist_id=None, category=None, done=None, labels=None, priority=None):
+    def update_entry(self, page_id, deleted=False, name=None, start_date=None, end_date=None, duration=None, gcal_id=None, todoist_id=None, category=None, done=None, labels=None, priority=None):
         data = {
             "page_id": page_id,
-            "archived": delete,
             "properties": {
                 self.properties['Last Updated']: {
                     "type": 'date',
@@ -241,6 +240,9 @@ class NotionAPI():
                 }
             },
         }
+
+        if deleted:
+            data['archived'] = deleted
 
         if name:
             # data['properties'][self.properties['Name']] = {}
