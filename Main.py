@@ -172,9 +172,10 @@ def bring_new_todoist_entries_to_notion(notion_entries, todoist, notion, task, t
 
 def bring_new_notion_entries_to_todoist(notion, todoist, notion_entries):
     # bring all new notion tasks to todoist
-    idx_new_notion_events = np.where(np.array(notion_entries['todoist_ids']) == None)[0]
-    idx_tasks = list(np.where(np.array(notion_entries['categories']) == gcal_config["Default Calendar"])[0])  # TODO: or category == None
-    idx_notion = list(set(idx_new_notion_events).intersection(idx_tasks))
+    idx_new_notion_events = set(np.where(np.array(notion_entries['todoist_ids']) == None)[0])
+    idx_tasks = list(np.where((np.array(notion_entries['categories']) == (gcal_config["Default Calendar"] or None)))[0])  # TODO: or category == None
+    idx_no_category = list(np.where((np.array(notion_entries['categories']) == None))[0])
+    idx_notion = list(set.intersection(idx_new_notion_events, set(idx_tasks + idx_no_category)))
 
     for idx in idx_notion:
         start_date = notion_entries['start_dates'][idx]
@@ -231,7 +232,7 @@ def commit_todoist_and_update_notion(notion, todoist, notion_entries, idx_notion
             page_id = notion_entries['notion_ids'][idx]
             todoist_id = item['id']
             todoist.check_or_uncheck_item(todoist_id, notion_entries['done'][idx])
-            notion.update_entry(page_id=page_id, todoist_id=str(todoist_id))
+            notion.update_entry(page_id=page_id, todoist_id=str(todoist_id), category=gcal_config["Default Calendar"])
         todoist.api.commit()
 
 

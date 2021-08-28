@@ -59,7 +59,10 @@ class TodoIstAPI():
                 priority_dict = dict(zip(list(range(4, 0, -1)), [str(i) for i in range(1, 5)]))
             return priority_dict[priority]
         else:
-            return None
+            if todoist_format:
+                return 4
+            else:
+                return "4"
 
     def get_duration(self, priority):
         duration_dict = {
